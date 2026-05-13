@@ -1,0 +1,22 @@
+{
+  "name": "padosoft/laravel-ai-act-compliance-admin",
+  "description": "Cross-mount React admin panel for laravel-ai-act-compliance",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": "^8.2",
+    "illuminate/support": "^11.0|^12.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Padosoft\\AiActComplianceAdmin\\": "php/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Padosoft\\AiActComplianceAdmin\\AiActComplianceAdminServiceProvider"
+      ]
+    }
+  }
+}
