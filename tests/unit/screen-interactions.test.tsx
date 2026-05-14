@@ -183,6 +183,20 @@ describe('Bias screen interactions', () => {
         expect(select).toBeInTheDocument();
         expect(select.getAttribute('data-testid')).toBe('bias-metric-name');
     });
+
+    it('switching parity metric ACTUALLY recomputes the overall accuracy badge', () => {
+        // Copilot review on PR #5 caught a stale-data bug where
+        // switching metric only updated the label/article evidence
+        // while the chart kept the demographic-parity numbers. The
+        // overall accuracy badge MUST reflect the per-metric
+        // transform now.
+        withRouter(<BiasScreen />);
+        const beforeText = screen.getByTestId('bias-overall').textContent ?? '';
+        const select = screen.getByTestId('bias-metric-name') as HTMLSelectElement;
+        fireEvent.change(select, { target: { value: 'calibration' } });
+        const afterText = screen.getByTestId('bias-overall').textContent ?? '';
+        expect(afterText).not.toBe(beforeText);
+    });
 });
 
 describe('Settings screen interactions', () => {

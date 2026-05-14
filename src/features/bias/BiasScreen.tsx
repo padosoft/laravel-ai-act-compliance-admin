@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 
 import { I } from '../../components/Icons';
 import { ArticleRef } from '../../components/Primitives';
-import { BIAS_METRICS, COHORT_DATA, COHORT_DIMENSIONS } from '../../lib/mock-data';
+import { BIAS_METRICS, COHORT_DATA, COHORT_DIMENSIONS, biasMetricDataFor } from '../../lib/mock-data';
 
 export function BiasScreen() {
     const [dimension, setDimension] = useState<string>('language');
@@ -12,7 +12,13 @@ export function BiasScreen() {
     // metadata endpoint in production).
     const [metricId, setMetricId] = useState<string>('demographic_parity');
     const metricMeta = BIAS_METRICS.find((m) => m.id === metricId) ?? BIAS_METRICS[0];
-    const data = COHORT_DATA[dimension] ?? COHORT_DATA.language;
+    // The per-metric transform on the cohort dataset ensures switching
+    // metric ACTUALLY recomputes the chart numbers + worst-cohort +
+    // overall accuracy — Copilot review on PR #5 caught a stale-data
+    // bug where only the label/article-evidence updated. Memoised so
+    // the transform doesn't re-run on every render.
+    const baseData = COHORT_DATA[dimension] ?? COHORT_DATA.language;
+    const data = useMemo(() => biasMetricDataFor(metricId, baseData), [metricId, baseData]);
     const dimensionMeta = COHORT_DIMENSIONS.find((d) => d.id === dimension);
 
     const worstRow = useMemo(

@@ -340,8 +340,9 @@ export const CONSENT_RATE: Record<string, ConsentRate> = {
 // v1.2 — Pluggable parity metrics surface. Mirrors the
 // `bias.metrics` config in padosoft/laravel-ai-act-compliance v1.2.
 // In production the FE fetches this list from
-// GET /api/ai-act/bias/metrics so a host-app custom metric appears
-// without a SPA bump; this fixture is the dev/seed fallback.
+// `GET /api/admin/ai-act-compliance/bias/metrics` so a host-app
+// custom metric appears without a SPA bump; this fixture is the
+// dev/seed fallback when the metadata endpoint is unreachable.
 export interface BiasMetricMeta {
     id: string;
     label: string;
@@ -369,6 +370,53 @@ export const BIAS_METRICS: BiasMetricMeta[] = [
         articleEvidence: ['AI Act Art. 15'],
     },
 ];
+
+// v1.2 — Per-metric cohort dataset. The chart numbers MUST change
+// when the operator switches between Demographic Parity / Equalized
+// Odds / Calibration — otherwise the UI would show the SAME numbers
+// under a different metric label and mislead reviewers. The per-
+// metric variants are derived from the default accuracy-parity data
+// via metric-specific transforms:
+//   - demographic_parity: accuracy-as-positive-rate (the default).
+//   - equalized_odds: a 0.7×accuracy + 0.3 transform that surfaces a
+//     wider per-cohort spread (TPR + FPR composite tends to widen
+//     the gap vs raw accuracy).
+//   - calibration: a |x − overall| transform — calibration is a GAP
+//     metric so cohorts close to overall accuracy show near-zero
+//     calibration error.
+// In production the FE swaps these fixtures for the live
+// `GET /api/admin/ai-act-compliance/bias/snapshots` payload (same
+// shape) so the same component renders both.
+export function biasMetricDataFor(metricId: string, source: CohortData): CohortData {
+    switch (metricId) {
+        case 'equalized_odds':
+            return transformCohortData(source, (accuracy) => 0.7 * accuracy + 0.15);
+        case 'calibration':
+            return transformCohortData(source, (accuracy) => Math.abs(accuracy - source.overall) * 1.5);
+        case 'demographic_parity':
+        default:
+            return source;
+    }
+}
+
+function transformCohortData(source: CohortData, transform: (accuracy: number) => number): CohortData {
+    return {
+        overall: round6(transform(source.overall)),
+        rows: source.rows.map((row) => ({
+            seg: row.seg,
+            samples: row.samples,
+            accuracy: round6(transform(row.accuracy)),
+            ciLow: round6(transform(row.ciLow)),
+            ciHigh: round6(transform(row.ciHigh)),
+        })),
+        drift: source.drift,
+        samples: source.samples,
+    };
+}
+
+function round6(value: number): number {
+    return Math.round(value * 1_000_000) / 1_000_000;
+}
 
 export interface CohortDimension {
     id: string;
