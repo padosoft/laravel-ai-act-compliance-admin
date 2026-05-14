@@ -1,6 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+
+// v1.2 — BiasScreen fires a best-effort fetch to
+// /api/admin/ai-act-compliance/bias/metrics on mount. Stub globalThis.fetch
+// to a 404 so the screen falls back to the fixture under tests; restore
+// in afterEach (test-actually-tests-what-it-claims R16).
+beforeEach(() => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(null, { status: 404 }) as unknown as Response,
+    );
+});
+afterEach(() => {
+    vi.restoreAllMocks();
+});
 
 import { DsarScreen } from '../../src/features/dsar/DsarScreen';
 import { ConsentScreen } from '../../src/features/consent/ConsentScreen';

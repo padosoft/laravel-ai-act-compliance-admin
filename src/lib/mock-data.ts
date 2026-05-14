@@ -378,12 +378,13 @@ export const BIAS_METRICS: BiasMetricMeta[] = [
 // metric variants are derived from the default accuracy-parity data
 // via metric-specific transforms:
 //   - demographic_parity: accuracy-as-positive-rate (the default).
-//   - equalized_odds: a 0.7×accuracy + 0.3 transform that surfaces a
-//     wider per-cohort spread (TPR + FPR composite tends to widen
-//     the gap vs raw accuracy).
-//   - calibration: a |x − overall| transform — calibration is a GAP
-//     metric so cohorts close to overall accuracy show near-zero
-//     calibration error.
+//   - equalized_odds: monotone-decreasing transform — TPR + FPR
+//     composites tend to surface a LOWER overall metric vs raw
+//     accuracy, so we scale down by 0.7 and shift down by 0.15 to
+//     produce a believable EO score from accuracy data.
+//   - calibration: a |x − overall| transform applied AFTER bounding
+//     the CI by min/max so the absolute-value step doesn't flip
+//     ciLow > ciHigh on cohorts below the overall accuracy.
 // In production the FE swaps these fixtures for the live
 // `GET /api/admin/ai-act-compliance/bias/snapshots` payload (same
 // shape) so the same component renders both.
@@ -392,7 +393,7 @@ export function biasMetricDataFor(metricId: string, source: CohortData): CohortD
         case 'equalized_odds':
             return transformCohortData(source, (accuracy) => 0.7 * accuracy + 0.15);
         case 'calibration':
-            return transformCohortData(source, (accuracy) => Math.abs(accuracy - source.overall) * 1.5);
+            return transformCalibration(source);
         case 'demographic_parity':
         default:
             return source;
@@ -402,14 +403,66 @@ export function biasMetricDataFor(metricId: string, source: CohortData): CohortD
 function transformCohortData(source: CohortData, transform: (accuracy: number) => number): CohortData {
     return {
         overall: round6(transform(source.overall)),
-        rows: source.rows.map((row) => ({
-            seg: row.seg,
-            samples: row.samples,
-            accuracy: round6(transform(row.accuracy)),
-            ciLow: round6(transform(row.ciLow)),
-            ciHigh: round6(transform(row.ciHigh)),
-        })),
-        drift: source.drift,
+        rows: source.rows.map((row) => {
+            // For monotone transforms the CI bounds preserve order; we
+            // still defensively bound by min/max so non-monotone
+            // transforms (e.g. calibration's |x − overall| variant
+            // routed through this helper) cannot invert the interval.
+            const lo = round6(transform(row.ciLow));
+            const hi = round6(transform(row.ciHigh));
+            return {
+                seg: row.seg,
+                samples: row.samples,
+                accuracy: round6(transform(row.accuracy)),
+                ciLow: Math.min(lo, hi),
+                ciHigh: Math.max(lo, hi),
+            };
+        }),
+        // Drift is also transformed — leaving it on the original
+        // accuracy scale would show demographic-parity drift behind
+        // a different metric label, which misleads reviewers. The
+        // per-week values get the same transform so the chart
+        // remains in-scale.
+        drift: source.drift
+            ? Object.fromEntries(
+                  Object.entries(source.drift).map(([cohort, series]) => [
+                      cohort,
+                      series.map((value) => round6(transform(value))),
+                  ]),
+              )
+            : undefined,
+        samples: source.samples,
+    };
+}
+
+function transformCalibration(source: CohortData): CohortData {
+    // Calibration is a GAP metric. Apply |x − overall| × 1.5, but
+    // compute it on the row.accuracy SCORE first, then derive the CI
+    // bounds independently — the abs() step is non-monotone, so we
+    // can't reuse the linear transform helper's CI-preservation.
+    const gap = (x: number) => Math.abs(x - source.overall) * 1.5;
+    return {
+        overall: 0, // perfect calibration baseline; cohorts deviate
+        rows: source.rows.map((row) => {
+            const score = round6(gap(row.accuracy));
+            const lo = round6(gap(row.ciLow));
+            const hi = round6(gap(row.ciHigh));
+            return {
+                seg: row.seg,
+                samples: row.samples,
+                accuracy: score,
+                ciLow: Math.min(lo, hi),
+                ciHigh: Math.max(lo, hi),
+            };
+        }),
+        drift: source.drift
+            ? Object.fromEntries(
+                  Object.entries(source.drift).map(([cohort, series]) => [
+                      cohort,
+                      series.map((value) => round6(gap(value))),
+                  ]),
+              )
+            : undefined,
         samples: source.samples,
     };
 }

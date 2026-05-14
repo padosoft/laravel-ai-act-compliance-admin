@@ -1,8 +1,52 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { I } from '../../components/Icons';
 import { ArticleRef } from '../../components/Primitives';
-import { BIAS_METRICS, COHORT_DATA, COHORT_DIMENSIONS, biasMetricDataFor } from '../../lib/mock-data';
+import {
+    BIAS_METRICS,
+    COHORT_DATA,
+    COHORT_DIMENSIONS,
+    biasMetricDataFor,
+    type BiasMetricMeta,
+} from '../../lib/mock-data';
+
+/**
+ * Fetch the live bias-metrics list from the BE. Production hosts
+ * expose `GET /api/admin/ai-act-compliance/bias/metrics` (planned in
+ * laravel-ai-act-compliance v1.2.1 — the BE endpoint follows the
+ * service-layer v1.2 in PR #2). Falls back to the bundled fixture
+ * when the endpoint is unreachable (dev, network failure, or v1.2
+ * BE without the metadata endpoint yet) so host-app custom metrics
+ * surface as soon as the endpoint ships without an SPA bump.
+ *
+ * R18 (derive-from-DB-not-literal) — the dropdown contents are
+ * derived from the live registry whenever it answers, fixture is
+ * the dev/seed fallback. R14 (surface-failures-loudly) — we
+ * deliberately log fetch failures via console.warn so the operator
+ * sees the fallback path was taken; we don't surface an error in
+ * the page because the fixture is a valid degraded mode.
+ */
+async function fetchBiasMetrics(signal: AbortSignal): Promise<BiasMetricMeta[] | null> {
+    try {
+        const response = await fetch('/api/admin/ai-act-compliance/bias/metrics', {
+            credentials: 'same-origin',
+            signal,
+        });
+        if (!response.ok) {
+            return null;
+        }
+        const payload = (await response.json()) as { data?: BiasMetricMeta[] } | BiasMetricMeta[];
+        if (Array.isArray(payload)) {
+            return payload;
+        }
+        if (payload && Array.isArray(payload.data)) {
+            return payload.data;
+        }
+        return null;
+    } catch (_) {
+        return null;
+    }
+}
 
 export function BiasScreen() {
     const [dimension, setDimension] = useState<string>('language');
@@ -11,7 +55,20 @@ export function BiasScreen() {
     // any host-app custom metric returned by the bias-metrics
     // metadata endpoint in production).
     const [metricId, setMetricId] = useState<string>('demographic_parity');
-    const metricMeta = BIAS_METRICS.find((m) => m.id === metricId) ?? BIAS_METRICS[0];
+    // Live registry list — falls back to the bundled fixture when the
+    // BE endpoint is unreachable (see fetchBiasMetrics docblock).
+    const [liveMetrics, setLiveMetrics] = useState<BiasMetricMeta[] | null>(null);
+    useEffect(() => {
+        const controller = new AbortController();
+        void fetchBiasMetrics(controller.signal).then((result) => {
+            if (result && result.length > 0) {
+                setLiveMetrics(result);
+            }
+        });
+        return () => controller.abort();
+    }, []);
+    const availableMetrics = liveMetrics ?? BIAS_METRICS;
+    const metricMeta = availableMetrics.find((m) => m.id === metricId) ?? availableMetrics[0];
     // The per-metric transform on the cohort dataset ensures switching
     // metric ACTUALLY recomputes the chart numbers + worst-cohort +
     // overall accuracy — Copilot review on PR #5 caught a stale-data
@@ -57,7 +114,7 @@ export function BiasScreen() {
                         onChange={(event) => setMetricId(event.target.value)}
                         data-testid="bias-metric-name"
                     >
-                        {BIAS_METRICS.map((metric) => (
+                        {availableMetrics.map((metric) => (
                             <option key={metric.id} value={metric.id}>
                                 {metric.label}
                             </option>
@@ -80,7 +137,20 @@ export function BiasScreen() {
                     </select>
                 </div>
                 <div className="filter-group">
-                    <label className="filter-label">Overall accuracy</label>
+                    {/*
+                     * Label tracks the active metric — calling a
+                     * Calibration GAP score "Overall accuracy" would
+                     * mislead reviewers. Demographic Parity surfaces
+                     * the positive-rate; Equalized Odds + Calibration
+                     * surface their respective per-cohort statistic.
+                     */}
+                    <label className="filter-label" data-testid="bias-overall-label">
+                        {metricId === 'demographic_parity'
+                            ? 'Overall accuracy'
+                            : metricId === 'calibration'
+                            ? 'Calibration gap'
+                            : metricMeta.label}
+                    </label>
                     <span className="mono large" data-testid="bias-overall">
                         {(data.overall * 100).toFixed(1)}%
                     </span>

@@ -1,6 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+
+// v1.2 — BiasScreen fires a best-effort fetch on mount; stub to 404 so
+// the rendered tree falls back to the fixture. Restore in afterEach.
+beforeEach(() => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(null, { status: 404 }) as unknown as Response,
+    );
+});
+afterEach(() => {
+    vi.restoreAllMocks();
+});
 
 import { OverviewScreen } from '../../src/features/overview/OverviewScreen';
 import { DsarScreen } from '../../src/features/dsar/DsarScreen';
