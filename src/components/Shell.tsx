@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import { ReactElement, ReactNode, useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { I, IconProps } from './Icons';
@@ -6,7 +6,7 @@ import { Avatar, Kbd } from './Primitives';
 import { fmtTime } from '../lib/helpers';
 import { DSAR, INCIDENTS, RISKS, type DsarRequest, type Incident, type Risk } from '../lib/mock-data';
 
-type IconComponent = (props: IconProps) => JSX.Element;
+type IconComponent = (props: IconProps) => ReactElement;
 
 interface RouteEntry {
     key: string;
@@ -286,7 +286,7 @@ function Topbar({ currentKey, theme, onTheme, onOpenPalette, lastTick, alertCoun
 interface PaletteItem {
     kind: 'nav' | 'action' | 'record';
     label: string;
-    icon: JSX.Element;
+    icon: ReactElement;
     meta?: string;
     action: () => void;
 }
