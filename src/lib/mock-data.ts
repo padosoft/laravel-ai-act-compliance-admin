@@ -337,6 +337,39 @@ export const CONSENT_RATE: Record<string, ConsentRate> = {
     biometric_voice: { granted: 18.2, revoked: 2.4, never: 79.4, trend: [12, 13, 14, 14, 15, 16, 16, 17, 17, 18, 18, 18.2] },
 };
 
+// v1.2 — Pluggable parity metrics surface. Mirrors the
+// `bias.metrics` config in padosoft/laravel-ai-act-compliance v1.2.
+// In production the FE fetches this list from
+// GET /api/ai-act/bias/metrics so a host-app custom metric appears
+// without a SPA bump; this fixture is the dev/seed fallback.
+export interface BiasMetricMeta {
+    id: string;
+    label: string;
+    description: string;
+    articleEvidence: string[];
+}
+
+export const BIAS_METRICS: BiasMetricMeta[] = [
+    {
+        id: 'demographic_parity',
+        label: 'Demographic Parity',
+        description: 'P(prediction = positive | cohort) parity across cohorts.',
+        articleEvidence: ['AI Act Art. 10', 'AI Act Art. 15'],
+    },
+    {
+        id: 'equalized_odds',
+        label: 'Equalized Odds',
+        description: 'TPR + FPR parity per cohort; max(TPR-spread, FPR-spread).',
+        articleEvidence: ['AI Act Art. 10', 'AI Act Art. 15'],
+    },
+    {
+        id: 'calibration',
+        label: 'Calibration',
+        description: '|mean(score) − mean(label)| per cohort.',
+        articleEvidence: ['AI Act Art. 15'],
+    },
+];
+
 export interface CohortDimension {
     id: string;
     name: string;

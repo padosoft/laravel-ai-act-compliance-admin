@@ -140,6 +140,49 @@ describe('Bias screen interactions', () => {
         withRouter(<BiasScreen />);
         expect(screen.getByTestId('bias-overall')).toBeInTheDocument();
     });
+
+    // v1.2 — Pluggable parity metrics
+    it('renders the parity-metric selector with the 3 reference metrics', () => {
+        withRouter(<BiasScreen />);
+        const select = screen.getByTestId('bias-metric-name') as HTMLSelectElement;
+        expect(select.options.length).toBeGreaterThanOrEqual(3);
+        const labels = Array.from(select.options).map((opt) => opt.textContent ?? '');
+        expect(labels).toContain('Demographic Parity');
+        expect(labels).toContain('Equalized Odds');
+        expect(labels).toContain('Calibration');
+    });
+
+    it('parity-metric label appears in the page sub when the selection changes', () => {
+        withRouter(<BiasScreen />);
+        expect(screen.getByTestId('bias-page-sub').textContent).toContain('Demographic Parity');
+
+        const select = screen.getByTestId('bias-metric-name') as HTMLSelectElement;
+        fireEvent.change(select, { target: { value: 'equalized_odds' } });
+
+        expect(screen.getByTestId('bias-page-sub').textContent).toContain('Equalized Odds');
+    });
+
+    it('article-evidence row renders ArticleRef chips for the active metric', () => {
+        withRouter(<BiasScreen />);
+        const evidence = screen.getByTestId('bias-article-evidence');
+        // Demographic Parity surfaces Art. 10 + Art. 15
+        expect(evidence.textContent).toContain('AI Act Art. 10');
+        expect(evidence.textContent).toContain('AI Act Art. 15');
+
+        // Calibration surfaces ONLY Art. 15
+        const select = screen.getByTestId('bias-metric-name') as HTMLSelectElement;
+        fireEvent.change(select, { target: { value: 'calibration' } });
+        const evidenceAfter = screen.getByTestId('bias-article-evidence');
+        expect(evidenceAfter.textContent).toContain('AI Act Art. 15');
+        expect(evidenceAfter.textContent).not.toContain('AI Act Art. 10');
+    });
+
+    it('parity-metric select has an accessible name via the <label htmlFor> binding (R15)', () => {
+        withRouter(<BiasScreen />);
+        const select = screen.getByLabelText(/parity metric/i);
+        expect(select).toBeInTheDocument();
+        expect(select.getAttribute('data-testid')).toBe('bias-metric-name');
+    });
 });
 
 describe('Settings screen interactions', () => {

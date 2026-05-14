@@ -73,6 +73,21 @@ test.describe('Admin Bias — cohort dimension', () => {
         await expect(page.getByTestId('bias-overall')).toBeVisible();
         await expect(page.getByTestId('bias-panels')).toBeVisible();
     });
+
+    // v1.2 — Pluggable parity metrics
+    test('switching parity metric refreshes article evidence + page sub', async ({ page }) => {
+        await page.goto('/bias');
+
+        await expect(page.getByTestId('bias-metric-name')).toBeVisible();
+        await expect(page.getByTestId('bias-page-sub')).toContainText('Demographic Parity');
+        await expect(page.getByTestId('bias-article-evidence')).toContainText('AI Act Art. 10');
+
+        // Switch to Calibration — surfaces ONLY Art. 15
+        await page.getByTestId('bias-metric-name').selectOption('calibration');
+        await expect(page.getByTestId('bias-page-sub')).toContainText('Calibration');
+        await expect(page.getByTestId('bias-article-evidence')).toContainText('AI Act Art. 15');
+        await expect(page.getByTestId('bias-article-evidence')).not.toContainText('AI Act Art. 10');
+    });
 });
 
 test.describe('Admin Settings — flags + secrets', () => {

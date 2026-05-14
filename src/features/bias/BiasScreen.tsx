@@ -2,10 +2,16 @@ import { useMemo, useState } from 'react';
 
 import { I } from '../../components/Icons';
 import { ArticleRef } from '../../components/Primitives';
-import { COHORT_DATA, COHORT_DIMENSIONS } from '../../lib/mock-data';
+import { BIAS_METRICS, COHORT_DATA, COHORT_DIMENSIONS } from '../../lib/mock-data';
 
 export function BiasScreen() {
     const [dimension, setDimension] = useState<string>('language');
+    // v1.2 — Pluggable parity metrics. The dropdown lets a DPO switch
+    // between Demographic Parity, Equalized Odds, and Calibration (or
+    // any host-app custom metric returned by the bias-metrics
+    // metadata endpoint in production).
+    const [metricId, setMetricId] = useState<string>('demographic_parity');
+    const metricMeta = BIAS_METRICS.find((m) => m.id === metricId) ?? BIAS_METRICS[0];
     const data = COHORT_DATA[dimension] ?? COHORT_DATA.language;
     const dimensionMeta = COHORT_DIMENSIONS.find((d) => d.id === dimension);
 
@@ -19,10 +25,17 @@ export function BiasScreen() {
             <div className="page-head">
                 <div>
                     <h1 className="page-title">Bias Monitor</h1>
-                    <p className="page-sub">
-                        Cohort parity tracking · AI Act Art. 10 (training data) + Art. 15 (accuracy + robustness) ·{' '}
-                        {COHORT_DIMENSIONS.length} dimensions
+                    <p className="page-sub" data-testid="bias-page-sub">
+                        Cohort parity tracking · {metricMeta.label} · {COHORT_DIMENSIONS.length} dimensions
                     </p>
+                    <div
+                        style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}
+                        data-testid="bias-article-evidence"
+                    >
+                        {metricMeta.articleEvidence.map((article) => (
+                            <ArticleRef key={article}>{article}</ArticleRef>
+                        ))}
+                    </div>
                 </div>
                 <div className="page-actions">
                     <button type="button" className="btn"><I.Download size={13} /> Export cohort report</button>
@@ -31,8 +44,24 @@ export function BiasScreen() {
 
             <div className="filter-bar">
                 <div className="filter-group">
-                    <label className="filter-label">Cohort dimension</label>
+                    <label className="filter-label" htmlFor="bias-metric-name">Parity metric</label>
                     <select
+                        id="bias-metric-name"
+                        value={metricId}
+                        onChange={(event) => setMetricId(event.target.value)}
+                        data-testid="bias-metric-name"
+                    >
+                        {BIAS_METRICS.map((metric) => (
+                            <option key={metric.id} value={metric.id}>
+                                {metric.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div className="filter-group">
+                    <label className="filter-label" htmlFor="bias-dimension">Cohort dimension</label>
+                    <select
+                        id="bias-dimension"
                         value={dimension}
                         onChange={(event) => setDimension(event.target.value)}
                         data-testid="bias-dimension"
