@@ -1,0 +1,404 @@
+/*
+ * v6.0/W7 — Overrides + supplements to the base handoff CSS.
+ *
+ * The base files (styles-base.css + styles-compliance.css) define the design
+ * tokens and most layout rules. This file adds the few extra classes used by
+ * the TypeScript port — patterns that didn't exist verbatim in the prototype
+ * but are needed by the cleaner component decomposition (per-screen drawers,
+ * filter bars, kanban lanes, risk summary tiles, consent bar, KV rows,
+ * timeline marker, switch).
+ */
+
+.page {
+    padding: 24px 28px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+}
+.page-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.page-head > div:first-child { flex: 1; }
+.page-title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text);
+}
+.page-sub {
+    margin: 4px 0 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+.page-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* --- Filter bar ----------------------------------------------------- */
+.filter-bar {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+}
+.filter-bar .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 160px;
+}
+.filter-bar .filter-group.grow { flex: 1; min-width: 220px; }
+.filter-bar .filter-label {
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+.filter-bar select,
+.filter-bar input[type="text"],
+.filter-bar input[type="date"] {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+}
+.bulk-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-left: auto;
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: var(--accent-soft, rgba(59, 130, 246, 0.12));
+    font-size: 12.5px;
+    color: var(--text);
+}
+
+/* --- Data table ----------------------------------------------------- */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+}
+.data-table thead th {
+    text-align: left;
+    padding: 10px 14px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-elevated);
+}
+.data-table tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+}
+.data-table tbody tr {
+    cursor: pointer;
+    transition: background 100ms ease;
+}
+.data-table tbody tr:hover { background: var(--bg-elevated); }
+.data-table tbody tr.active { background: var(--accent-soft, rgba(59, 130, 246, 0.12)); }
+.data-table.compact thead th,
+.data-table.compact tbody td { padding: 6px 10px; font-size: 11.5px; }
+.data-table .row-flagged td { background: rgba(239, 68, 68, 0.06); }
+
+/* --- Status pill ---------------------------------------------------- */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+/* --- Risk register tiles ------------------------------------------- */
+.risk-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(160px, 1fr));
+    gap: 12px;
+}
+.risk-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    cursor: pointer;
+    color: var(--text);
+    text-align: left;
+    transition: border-color 150ms ease;
+}
+.risk-tile.active { border-color: var(--accent); }
+.risk-tile.unacceptable { border-color: var(--sev-critical); }
+.risk-tile.high { border-color: var(--sev-high); }
+.risk-tile.limited { border-color: var(--sev-medium); }
+.risk-tile.low { border-color: var(--sev-low); }
+.risk-tile-count {
+    font-size: 26px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+}
+.risk-tile-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.risk-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: left;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+}
+.risk-card.unacceptable { border-left-color: var(--sev-critical); }
+.risk-card.high { border-left-color: var(--sev-high); }
+.risk-card.limited { border-left-color: var(--sev-medium); }
+.risk-card.low { border-left-color: var(--sev-low); }
+
+/* --- Consent ------------------------------------------------------- */
+.consent-card { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
+.consent-bar {
+    display: flex;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--bg);
+    margin-top: 6px;
+}
+.consent-bar .seg.granted { background: var(--sev-low); }
+.consent-bar .seg.revoked { background: var(--sev-high); }
+.consent-bar .seg.never { background: var(--border-strong, #475569); }
+.consent-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+}
+.consent-legend .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 4px;
+}
+.consent-legend .dot.granted { background: var(--sev-low); }
+.consent-legend .dot.revoked { background: var(--sev-high); }
+.consent-legend .dot.never { background: var(--border-strong, #475569); }
+
+.consent-cell {
+    text-align: center;
+    font-weight: 600;
+    font-size: 13px;
+}
+.consent-cell.granted { color: var(--sev-low); }
+.consent-cell.revoked { color: var(--sev-high); }
+.consent-cell.never { color: var(--text-tertiary); }
+
+/* --- Tabs ----------------------------------------------------------- */
+.tabs { display: flex; gap: 6px; }
+.tabs .tab {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+}
+.tabs .tab.active {
+    background: var(--accent);
+    color: var(--accent-fg, #fff);
+    border-color: var(--accent);
+}
+
+/* --- Kanban -------------------------------------------------------- */
+.kanban {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(220px, 1fr));
+    gap: 14px;
+    align-items: flex-start;
+}
+.kanban-lane {
+    background: var(--bg-elevated);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+.kanban-lane-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 12.5px;
+    color: var(--text);
+}
+.kanban-cards { display: flex; flex-direction: column; gap: 8px; padding: 10px; }
+.incident-card {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+}
+.incident-card.sev-critical { border-left: 3px solid var(--sev-critical); }
+.incident-card.sev-high { border-left: 3px solid var(--sev-high); }
+.incident-card.sev-medium { border-left: 3px solid var(--sev-medium); }
+.incident-card.sev-low { border-left: 3px solid var(--sev-low); }
+.severity-pill {
+    text-transform: uppercase;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+
+/* --- Detail panes / drawer content -------------------------------- */
+.kv {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    column-gap: 12px;
+    align-items: baseline;
+    padding: 4px 0;
+    font-size: 12.5px;
+}
+.kv > span:first-child { color: var(--text-tertiary); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+.detail-section { display: flex; flex-direction: column; gap: 6px; margin-top: 18px; }
+.detail-section h4 { margin: 0 0 4px; font-size: 12.5px; font-weight: 600; color: var(--text); text-transform: uppercase; letter-spacing: 0.04em; }
+
+.timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.timeline li { display: flex; gap: 10px; }
+.timeline-marker {
+    flex: 0 0 10px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-top: 5px;
+}
+.timeline b { font-size: 12.5px; color: var(--text); display: block; }
+.timeline small { color: var(--text-tertiary); font-size: 11.5px; }
+
+.mitigations, .escalation {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+}
+
+/* --- Switch -------------------------------------------------------- */
+.switch {
+    width: 38px;
+    height: 22px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    position: relative;
+    cursor: pointer;
+    transition: background 120ms ease;
+    padding: 0;
+}
+.switch.on { background: var(--accent); border-color: var(--accent); }
+.switch .thumb {
+    display: block;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 3px;
+    transition: left 120ms ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.switch.on .thumb { left: 18px; }
+
+/* --- Grid helpers -------------------------------------------------- */
+.grid-fit-360 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 12px;
+}
+.grid-2-equal {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+    gap: 14px;
+}
+
+/* --- Data flow nodes / edges ------------------------------------- */
+.data-flow-node rect { stroke-width: 1; }
+.data-flow-node.source rect { stroke: var(--sev-low); }
+.data-flow-node.processor rect { stroke: var(--sev-medium); }
+.data-flow-node.core rect { stroke: var(--accent); fill: var(--accent-soft, rgba(59, 130, 246, 0.18)); }
+.data-flow-node.output rect { stroke: var(--text-secondary); }
+
+/* --- Utility ------------------------------------------------------- */
+.mt-4 { margin-top: 4px; }
+.mt-16 { margin-top: 16px; }
+.mono { font-family: var(--font-mono, ui-monospace); }
+.muted { color: var(--text-tertiary); }
+.empty {
+    padding: 24px;
+    text-align: center;
+    color: var(--text-tertiary);
+    background: var(--bg-elevated);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+}
+.center.gap-6 { display: inline-flex; gap: 6px; align-items: center; }
+.large { font-size: 18px; font-weight: 700; }
+
+/* Buttons (minimal — base CSS may already provide .btn) */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+}
+.btn.sm { padding: 4px 10px; font-size: 12px; }
+.btn.primary { background: var(--accent); color: var(--accent-fg, #fff); border-color: var(--accent); }
+.btn.warn { border-color: var(--sev-high); color: var(--sev-high); }
+.btn.ghost { background: transparent; border-color: transparent; }
+.btn[disabled] { opacity: 0.5; cursor: not-allowed; }
