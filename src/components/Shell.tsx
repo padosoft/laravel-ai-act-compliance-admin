@@ -21,6 +21,7 @@ export const ROUTES: RouteEntry[] = [
     { key: 'dsar', path: '/dsar', label: 'DSAR Queue', icon: I.Inbox, section: 'Operations' },
     { key: 'consent', path: '/consent', label: 'Consent Overview', icon: I.ShieldCheck, section: 'Operations' },
     { key: 'risks', path: '/risks', label: 'Risk Register', icon: I.ShieldAlert, section: 'Risk Management' },
+    { key: 'fria', path: '/fria', label: 'FRIA Assessments', icon: I.FileText, section: 'Risk Management' },
     { key: 'incidents', path: '/incidents', label: 'Incident Manager', icon: I.Flag, section: 'Risk Management' },
     { key: 'bias', path: '/bias', label: 'Bias Monitor', icon: I.Scale, section: 'Risk Management' },
     { key: 'dpo', path: '/dpo', label: 'DPO Console', icon: I.Briefcase, section: 'Governance' },

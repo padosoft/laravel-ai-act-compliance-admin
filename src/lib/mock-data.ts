@@ -198,6 +198,114 @@ export const RISKS: Risk[] = [
     { id: 'risk_012', name: 'Cross-border data transfer (US sub-processor)', category: 'limited', status: 'in_progress', owner: ADMINS[4], lastReviewed: dayAgo(7), articles: ['GDPR Art. 44', 'GDPR Art. 46'], desc: 'Embedding model hosted on US-region inference. SCC + TIA documented; EU-region fallback under negotiation with vendor.' },
 ];
 
+// FRIA — Fundamental Rights Impact Assessment (AI Act Art. 27).
+// Mirrors the FriaAssessment Eloquent model in
+// `padosoft/laravel-ai-act-compliance` (status enum, JSON columns,
+// review cadence + sign-off audit fields).
+export type FriaStatus = 'draft' | 'active' | 'review_due' | 'retired';
+
+export interface FriaAssessment {
+    id: string;
+    title: string;
+    scope: string;
+    status: FriaStatus;
+    projectKey: string | null;
+    risks: string[];
+    mitigations: Record<string, string>;
+    reviewCadenceDays: number;
+    nextReviewAt: number | null;
+    openedBy: Admin;
+    signedOffBy: Admin | null;
+    signedOffAt: number | null;
+}
+
+export const FRIA: FriaAssessment[] = [
+    {
+        id: 'fria_001',
+        title: 'CV screening for HR partner',
+        scope: 'AI-assisted resume ranking in the recruiting workspace. Annex III §4 (employment).',
+        status: 'active',
+        projectKey: 'hr-portal',
+        risks: ['discrimination_by_age', 'historic_bias_in_training_data', 'opaque_ranking'],
+        mitigations: {
+            human_review_threshold: 'Mandatory human-in-the-loop for every shortlisted candidate.',
+            transparency_notice: 'Explicit AI-assistance disclosure in the candidate journey.',
+            audit_logging: 'Per-decision audit log retained 24 months.',
+        },
+        reviewCadenceDays: 90,
+        nextReviewAt: NOW + 32 * 86_400_000,
+        openedBy: ADMINS[0],
+        signedOffBy: ADMINS[0],
+        signedOffAt: dayAgo(58),
+    },
+    {
+        id: 'fria_002',
+        title: 'Customer support agent — IT/EN',
+        scope: 'Conversational AI answering customer queries. Art. 50 transparency obligations.',
+        status: 'active',
+        projectKey: 'support',
+        risks: ['hallucinated_advice', 'cohort_accuracy_drift_italian'],
+        mitigations: {
+            retrieval_grounding: 'Answer only from internal KB (RAG); refuse on missing context.',
+            disclosure_header: 'X-AI-Disclosure header + UI watermark on every response.',
+        },
+        reviewCadenceDays: 180,
+        nextReviewAt: NOW + 90 * 86_400_000,
+        openedBy: ADMINS[3],
+        signedOffBy: ADMINS[4],
+        signedOffAt: dayAgo(12),
+    },
+    {
+        id: 'fria_003',
+        title: 'Compliance assistant (internal tooling)',
+        scope: 'Internal LLM-backed assistant for DPO + legal team. Low-risk per Annex III.',
+        status: 'draft',
+        projectKey: 'compliance',
+        risks: ['data_leakage_through_prompts'],
+        mitigations: {
+            pii_redactor: 'Default-on PII redaction at the request boundary.',
+        },
+        reviewCadenceDays: 180,
+        nextReviewAt: null,
+        openedBy: ADMINS[1],
+        signedOffBy: null,
+        signedOffAt: null,
+    },
+    {
+        id: 'fria_004',
+        title: 'Bias monitoring across cohort dimensions',
+        scope: 'Continuous bias monitor across language + role + tenant cohorts. Art. 10 / Art. 15.',
+        status: 'review_due',
+        projectKey: null,
+        risks: ['undetected_cohort_regression', 'metric_dilution_by_aggregate'],
+        mitigations: {
+            adversarial_nightly: 'Nightly adversarial eval; alerts on per-lane regressions.',
+            cohort_dashboard: 'Per-dimension accuracy panels in admin SPA.',
+        },
+        reviewCadenceDays: 30,
+        nextReviewAt: NOW - 4 * 86_400_000,
+        openedBy: ADMINS[3],
+        signedOffBy: ADMINS[3],
+        signedOffAt: dayAgo(34),
+    },
+    {
+        id: 'fria_005',
+        title: 'Deprecated voice-emotion experiment',
+        scope: 'Refused at design phase. Retained in register for audit trail. Art. 5(1)(f).',
+        status: 'retired',
+        projectKey: 'r-and-d',
+        risks: ['fundamental_rights_breach_emotion_recognition'],
+        mitigations: {
+            outright_refusal: 'Feature blocked at intake; documented in compliance attestation.',
+        },
+        reviewCadenceDays: 180,
+        nextReviewAt: null,
+        openedBy: ADMINS[4],
+        signedOffBy: ADMINS[4],
+        signedOffAt: dayAgo(220),
+    },
+];
+
 export interface ConsentFeature {
     id: string;
     name: string;

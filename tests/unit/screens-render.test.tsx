@@ -6,6 +6,7 @@ import { OverviewScreen } from '../../src/features/overview/OverviewScreen';
 import { DsarScreen } from '../../src/features/dsar/DsarScreen';
 import { ConsentScreen } from '../../src/features/consent/ConsentScreen';
 import { RisksScreen } from '../../src/features/risks/RisksScreen';
+import { FriaScreen } from '../../src/features/fria/FriaScreen';
 import { IncidentsScreen } from '../../src/features/incidents/IncidentsScreen';
 import { BiasScreen } from '../../src/features/bias/BiasScreen';
 import { DpoScreen } from '../../src/features/dpo/DpoScreen';
@@ -44,6 +45,13 @@ describe('Compliance admin screens render', () => {
         expect(getByTestId('risks-screen')).toBeTruthy();
         expect(getByTestId('risk-summary')).toBeTruthy();
         expect(getByTestId('risk-grid')).toBeTruthy();
+    });
+
+    it('FriaScreen renders filter bar and assessment table', () => {
+        const { getByTestId } = renderWithRouter(<FriaScreen />);
+        expect(getByTestId('fria-screen')).toBeTruthy();
+        expect(getByTestId('fria-filter-bar')).toBeTruthy();
+        expect(getByTestId('fria-table')).toBeTruthy();
     });
 
     it('IncidentsScreen renders kanban with 4 lanes', () => {

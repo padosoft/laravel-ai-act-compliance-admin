@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { DsarScreen } from '../../src/features/dsar/DsarScreen';
 import { ConsentScreen } from '../../src/features/consent/ConsentScreen';
 import { RisksScreen } from '../../src/features/risks/RisksScreen';
+import { FriaScreen } from '../../src/features/fria/FriaScreen';
 import { IncidentsScreen } from '../../src/features/incidents/IncidentsScreen';
 import { BiasScreen } from '../../src/features/bias/BiasScreen';
 import { SettingsScreen } from '../../src/features/settings/SettingsScreen';
@@ -66,6 +67,34 @@ describe('Risks screen interactions', () => {
         const filteredCount = grid.querySelectorAll('[data-testid^="risk-card-"]').length;
         // Filtering should narrow the grid (unless every risk was high already)
         expect(filteredCount).toBeLessThanOrEqual(initialCardCount);
+    });
+});
+
+describe('FRIA screen interactions', () => {
+    it('renders all assessment rows from the fixture by default', () => {
+        withRouter(<FriaScreen />);
+        const rows = screen.getAllByTestId(/^fria-row-/);
+        expect(rows.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('opens the drawer when a row is clicked', () => {
+        withRouter(<FriaScreen />);
+        const firstRow = screen.getAllByTestId(/^fria-row-/)[0];
+        fireEvent.click(firstRow);
+        const detail = screen.getAllByTestId(/^fria-detail-/)[0];
+        expect(detail).toBeInTheDocument();
+    });
+
+    it('filters table by status when the status select changes', () => {
+        withRouter(<FriaScreen />);
+        const select = screen.getByTestId('fria-filter-status') as HTMLSelectElement;
+        const before = screen.queryAllByTestId(/^fria-row-/).length;
+        fireEvent.change(select, { target: { value: 'review_due' } });
+        const after = screen.queryAllByTestId(/^fria-row-/);
+        expect(after.length).toBeLessThanOrEqual(before);
+        after.forEach((row) => {
+            expect(row.textContent).toMatch(/Review due/);
+        });
     });
 });
 

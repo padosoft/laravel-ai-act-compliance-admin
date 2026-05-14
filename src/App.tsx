@@ -5,6 +5,7 @@ import { OverviewScreen } from './features/overview/OverviewScreen';
 import { DsarScreen } from './features/dsar/DsarScreen';
 import { ConsentScreen } from './features/consent/ConsentScreen';
 import { RisksScreen } from './features/risks/RisksScreen';
+import { FriaScreen } from './features/fria/FriaScreen';
 import { IncidentsScreen } from './features/incidents/IncidentsScreen';
 import { BiasScreen } from './features/bias/BiasScreen';
 import { DpoScreen } from './features/dpo/DpoScreen';
@@ -31,6 +32,7 @@ export function App() {
                     <Route path="dsar" element={<DsarScreen />} />
                     <Route path="consent" element={<ConsentScreen />} />
                     <Route path="risks" element={<RisksScreen />} />
+                    <Route path="fria" element={<FriaScreen />} />
                     <Route path="incidents" element={<IncidentsScreen />} />
                     <Route path="bias" element={<BiasScreen />} />
                     <Route path="dpo" element={<DpoScreen />} />

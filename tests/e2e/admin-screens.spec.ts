@@ -33,6 +33,24 @@ test.describe('Admin Risks — interactions', () => {
     });
 });
 
+test.describe('Admin FRIA — assessments', () => {
+    test('renders the assessment table', async ({ page }) => {
+        await page.goto('/fria');
+        await expect(page.getByTestId('fria-screen')).toBeVisible();
+        await expect(page.getByTestId('fria-table')).toBeVisible();
+        const rows = page.locator('[data-testid^="fria-row-"]');
+        expect(await rows.count()).toBeGreaterThan(0);
+    });
+
+    test('opens the drawer when a FRIA row is clicked', async ({ page }) => {
+        await page.goto('/fria');
+        const firstRow = page.locator('[data-testid^="fria-row-"]').first();
+        await firstRow.click();
+        await expect(page.locator('[data-testid^="fria-detail-"]')).toBeVisible();
+        await expect(page.getByTestId('fria-sign-off-button')).toBeVisible();
+    });
+});
+
 test.describe('Admin Incidents — kanban', () => {
     test('renders the 4 lifecycle lanes', async ({ page }) => {
         await page.goto('/incidents');
