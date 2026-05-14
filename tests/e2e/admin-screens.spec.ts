@@ -68,7 +68,7 @@ test.describe('Admin Settings — flags + secrets', () => {
 
     test('feature flag toggle flips aria-checked', async ({ page }) => {
         await page.goto('/settings');
-        const toggle = page.getByTestId('settings-flag-toggle-marketing');
+        const toggle = page.getByTestId('settings-flag-toggle-disclosure');
         await toggle.waitFor({ state: 'visible' });
         const before = await toggle.getAttribute('aria-checked');
         await toggle.click();
