@@ -17,9 +17,15 @@ describe('DSAR screen interactions', () => {
     it('filters table by status when the status select changes', () => {
         withRouter(<DsarScreen />);
         const select = screen.getByTestId('dsar-filter-status') as HTMLSelectElement;
+        const beforeRows = screen.queryAllByTestId(/^dsar-row-/).length;
         fireEvent.change(select, { target: { value: 'pending' } });
-        // Should hide all completed rows after the filter applies
-        expect(screen.queryAllByText(/Completed/).length).toBe(0);
+        const afterRows = screen.queryAllByTestId(/^dsar-row-/);
+        // Filter must narrow (or keep equal — if everything was already pending)
+        expect(afterRows.length).toBeLessThanOrEqual(beforeRows);
+        // Every remaining row must be pending, not completed/rejected
+        afterRows.forEach((row) => {
+            expect(row.textContent).not.toMatch(/Completed|Rejected/);
+        });
     });
 
     it('opens the drawer when a row is clicked', () => {
@@ -110,7 +116,7 @@ describe('Bias screen interactions', () => {
 describe('Settings screen interactions', () => {
     it('toggles a feature flag when the switch is clicked', () => {
         withRouter(<SettingsScreen />);
-        const toggle = screen.getByTestId('settings-flag-toggle-marketing') ?? screen.getByTestId('settings-flag-toggle-disclosure');
+        const toggle = screen.getByTestId('settings-flag-toggle-disclosure');
         const initialPressed = toggle.getAttribute('aria-checked');
         fireEvent.click(toggle);
         const nextPressed = toggle.getAttribute('aria-checked');

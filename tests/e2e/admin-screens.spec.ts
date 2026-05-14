@@ -5,8 +5,12 @@ test.describe('Admin DSAR — interactions', () => {
         await page.goto('/dsar');
         await expect(page.getByTestId('dsar-screen')).toBeVisible();
         await page.getByTestId('dsar-filter-status').selectOption('pending');
-        // After filtering, no completed pills should remain
-        await expect(page.getByText(/Completed/i)).toHaveCount(0);
+        // After filtering by 'pending', no row should carry the Completed/Rejected pill
+        const rows = page.locator('[data-testid^="dsar-row-"]');
+        const count = await rows.count();
+        for (let i = 0; i < count; i++) {
+            await expect(rows.nth(i)).not.toContainText(/Completed|Rejected/);
+        }
     });
 
     test('opens drawer when row is clicked', async ({ page }) => {

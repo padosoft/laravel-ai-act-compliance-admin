@@ -14,9 +14,17 @@ import './styles-base.css';
 import './styles-compliance.css';
 import './styles-overrides.css';
 
+function resolveBasename(): string {
+    const fromEnv = import.meta.env.VITE_ADMIN_BASENAME;
+    if (typeof fromEnv === 'string' && fromEnv.length > 0) {
+        return fromEnv;
+    }
+    return import.meta.env.PROD ? '/admin/ai-act-compliance' : '/';
+}
+
 export function App() {
     return (
-        <BrowserRouter basename="/admin/ai-act-compliance">
+        <BrowserRouter basename={resolveBasename()}>
             <Routes>
                 <Route element={<Shell />}>
                     <Route index element={<OverviewScreen />} />
