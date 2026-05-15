@@ -49,9 +49,7 @@ async function fetchAlertDispatches(signal: AbortSignal): Promise<AlertDispatchR
         }
         return null;
     } catch (error) {
-        if (typeof console !== 'undefined' && typeof console.warn === 'function') {
-            console.warn('[AlertsScreen] /alerts/dispatches unreachable; falling back to bundled fixture.', error);
-        }
+        console.warn('[AlertsScreen] /alerts/dispatches unreachable; falling back to bundled fixture.', error);
         return null;
     }
 }
