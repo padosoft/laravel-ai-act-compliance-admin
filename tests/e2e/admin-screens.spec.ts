@@ -341,14 +341,14 @@ test.describe('Admin Tenants — DPO console', () => {
         // `/tenants`, returning the JSON payload as the HTML body and
         // breaking the page render entirely. Anchor on `/api/`.
         // Copilot iter-1 on PR #8.
-        await page.route('**/api/**/tenants', async (route) => {
+        await page.route(/\/api\/.*\/tenants$/, async (route) => {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
                 body: JSON.stringify({ data: FIXTURE }),
             });
         });
-        await page.route('**/api/**/tenants/*', async (route) => {
+        await page.route(/\/api\/.*\/tenants\/[^/]+$/, async (route) => {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
