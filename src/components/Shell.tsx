@@ -18,6 +18,7 @@ interface RouteEntry {
 
 export const ROUTES: RouteEntry[] = [
     { key: 'overview', path: '/', label: 'Compliance Overview', icon: I.Home, section: 'Operations' },
+    { key: 'alerts', path: '/alerts', label: 'Alerts', icon: I.Bell, section: 'Operations' },
     { key: 'dsar', path: '/dsar', label: 'DSAR Queue', icon: I.Inbox, section: 'Operations' },
     { key: 'consent', path: '/consent', label: 'Consent Overview', icon: I.ShieldCheck, section: 'Operations' },
     { key: 'risks', path: '/risks', label: 'Risk Register', icon: I.ShieldAlert, section: 'Risk Management' },

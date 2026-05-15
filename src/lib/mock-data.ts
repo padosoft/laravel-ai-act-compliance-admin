@@ -198,6 +198,151 @@ export const RISKS: Risk[] = [
     { id: 'risk_012', name: 'Cross-border data transfer (US sub-processor)', category: 'limited', status: 'in_progress', owner: ADMINS[4], lastReviewed: dayAgo(7), articles: ['GDPR Art. 44', 'GDPR Art. 46'], desc: 'Embedding model hosted on US-region inference. SCC + TIA documented; EU-region fallback under negotiation with vendor.' },
 ];
 
+// v1.3 — Real-time alerting cascade. Mirrors the
+// `alert_routes` + `alert_dispatches` schema in
+// `padosoft/laravel-ai-act-compliance` v1.3. In production the FE
+// fetches the alert log from
+// `GET /api/admin/ai-act-compliance/alerts/dispatches` and the
+// route config from `GET /api/admin/ai-act-compliance/alerts/routes`.
+export type AlertChannel = 'slack' | 'discord' | 'email';
+export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical';
+export type AlertStatus = 'ok' | 'transient_failure' | 'permanent_failure';
+
+export interface AlertDispatchRow {
+    id: string;
+    tenantId: string | null;
+    channel: AlertChannel;
+    severity: AlertSeverity;
+    title: string;
+    status: AlertStatus;
+    httpStatus: number | null;
+    errorMessage: string | null;
+    metricName: string | null;
+    cohort: string | null;
+    sentAt: number;
+}
+
+export interface AlertRoute {
+    channel: AlertChannel;
+    enabled: boolean;
+    endpointMasked: string;
+    consecutiveFailures: number;
+    trippedUntil: number | null;
+    lastSuccessAt: number | null;
+    lastFailureAt: number | null;
+}
+
+export const ALERT_DISPATCHES: AlertDispatchRow[] = [
+    {
+        id: 'ad_001',
+        tenantId: 'tenant-a',
+        channel: 'slack',
+        severity: 'critical',
+        title: 'Bias drift on demographic_parity',
+        status: 'ok',
+        httpStatus: 200,
+        errorMessage: null,
+        metricName: 'demographic_parity',
+        cohort: 'language=it',
+        sentAt: minAgo(3),
+    },
+    {
+        id: 'ad_002',
+        tenantId: 'tenant-a',
+        channel: 'email',
+        severity: 'critical',
+        title: 'Bias drift on demographic_parity',
+        status: 'ok',
+        httpStatus: null,
+        errorMessage: null,
+        metricName: 'demographic_parity',
+        cohort: 'language=it',
+        sentAt: minAgo(3),
+    },
+    {
+        id: 'ad_003',
+        tenantId: 'tenant-b',
+        channel: 'slack',
+        severity: 'high',
+        title: 'Bias drift on equalized_odds',
+        status: 'transient_failure',
+        httpStatus: 503,
+        errorMessage: 'Slack webhook returned 503',
+        metricName: 'equalized_odds',
+        cohort: 'age_band=60+',
+        sentAt: minAgo(14),
+    },
+    {
+        id: 'ad_004',
+        tenantId: 'tenant-b',
+        channel: 'discord',
+        severity: 'high',
+        title: 'Bias drift on equalized_odds',
+        status: 'ok',
+        httpStatus: 204,
+        errorMessage: null,
+        metricName: 'equalized_odds',
+        cohort: 'age_band=60+',
+        sentAt: minAgo(13),
+    },
+    {
+        id: 'ad_005',
+        tenantId: 'tenant-c',
+        channel: 'slack',
+        severity: 'medium',
+        title: 'Bias drift on calibration',
+        status: 'permanent_failure',
+        httpStatus: 401,
+        errorMessage: 'Slack webhook returned 401',
+        metricName: 'calibration',
+        cohort: 'country=DE',
+        sentAt: hrAgo(2),
+    },
+    {
+        id: 'ad_006',
+        tenantId: 'tenant-c',
+        channel: 'email',
+        severity: 'medium',
+        title: 'Bias drift on calibration',
+        status: 'ok',
+        httpStatus: null,
+        errorMessage: null,
+        metricName: 'calibration',
+        cohort: 'country=DE',
+        sentAt: hrAgo(2),
+    },
+];
+
+export const ALERT_ROUTES: AlertRoute[] = [
+    {
+        channel: 'slack',
+        enabled: true,
+        endpointMasked: 'https://hooks.slack.com/services/T01****/B0****/****x9',
+        consecutiveFailures: 0,
+        trippedUntil: null,
+        lastSuccessAt: minAgo(3),
+        lastFailureAt: hrAgo(2),
+    },
+    {
+        channel: 'discord',
+        enabled: true,
+        endpointMasked: 'https://discord.com/api/webhooks/0****/****abc',
+        consecutiveFailures: 0,
+        trippedUntil: null,
+        lastSuccessAt: minAgo(13),
+        lastFailureAt: null,
+    },
+    {
+        channel: 'email',
+        enabled: true,
+        endpointMasked: 'dpo@padosoft.com',
+        consecutiveFailures: 0,
+        trippedUntil: null,
+        lastSuccessAt: minAgo(3),
+        lastFailureAt: null,
+    },
+];
+
 // FRIA — Fundamental Rights Impact Assessment (AI Act Art. 27).
 // Mirrors the FriaAssessment Eloquent model in
 // `padosoft/laravel-ai-act-compliance` (status enum, JSON columns,

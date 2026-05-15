@@ -15,6 +15,7 @@ afterEach(() => {
 });
 
 import { OverviewScreen } from '../../src/features/overview/OverviewScreen';
+import { AlertsScreen } from '../../src/features/alerts/AlertsScreen';
 import { DsarScreen } from '../../src/features/dsar/DsarScreen';
 import { ConsentScreen } from '../../src/features/consent/ConsentScreen';
 import { RisksScreen } from '../../src/features/risks/RisksScreen';
@@ -37,6 +38,14 @@ describe('Compliance admin screens render', () => {
         expect(getByTestId('activity-feed')).toBeTruthy();
         expect(getByTestId('dsar-depth-chart')).toBeTruthy();
         expect(getByTestId('attestation-card')).toBeTruthy();
+    });
+
+    it('AlertsScreen renders filter bar, table, and live pill', () => {
+        const { getByTestId } = renderWithRouter(<AlertsScreen />);
+        expect(getByTestId('alerts-screen')).toBeTruthy();
+        expect(getByTestId('alerts-filter-bar')).toBeTruthy();
+        expect(getByTestId('alerts-table')).toBeTruthy();
+        expect(getByTestId('alerts-live-pill')).toBeTruthy();
     });
 
     it('DsarScreen renders the table and filter bar', () => {

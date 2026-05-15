@@ -16,6 +16,7 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
+import { AlertsScreen } from '../../src/features/alerts/AlertsScreen';
 import { DsarScreen } from '../../src/features/dsar/DsarScreen';
 import { ConsentScreen } from '../../src/features/consent/ConsentScreen';
 import { RisksScreen } from '../../src/features/risks/RisksScreen';
@@ -81,6 +82,50 @@ describe('Risks screen interactions', () => {
         const filteredCount = grid.querySelectorAll('[data-testid^="risk-card-"]').length;
         // Filtering should narrow the grid (unless every risk was high already)
         expect(filteredCount).toBeLessThanOrEqual(initialCardCount);
+    });
+});
+
+describe('Alerts screen interactions', () => {
+    it('renders dispatch rows from the fixture by default', () => {
+        withRouter(<AlertsScreen />);
+        const rows = screen.getAllByTestId(/^alerts-row-/);
+        expect(rows.length).toBeGreaterThanOrEqual(4);
+    });
+
+    it('filters rows by channel when the channel select changes', () => {
+        withRouter(<AlertsScreen />);
+        const before = screen.queryAllByTestId(/^alerts-row-(?:[a-z]+_[0-9]+)$/).length;
+        const select = screen.getByTestId('alerts-filter-channel') as HTMLSelectElement;
+        fireEvent.change(select, { target: { value: 'slack' } });
+        const after = screen.queryAllByTestId(/^alerts-row-(?:[a-z]+_[0-9]+)$/);
+        expect(after.length).toBeLessThanOrEqual(before);
+        after.forEach((row) => {
+            expect(row.textContent).toContain('slack');
+        });
+    });
+
+    it('filters by status (transient_failure surfaces retry buttons)', () => {
+        withRouter(<AlertsScreen />);
+        fireEvent.change(screen.getByTestId('alerts-filter-status'), {
+            target: { value: 'transient_failure' },
+        });
+        const retryButtons = screen.queryAllByTestId(/^alerts-row-[a-z]+_[0-9]+-retry$/);
+        expect(retryButtons.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('clicking a row opens the inline detail card', () => {
+        withRouter(<AlertsScreen />);
+        const firstRow = screen.getAllByTestId(/^alerts-row-[a-z]+_[0-9]+$/)[0];
+        fireEvent.click(firstRow);
+        const detail = screen.getAllByTestId(/^alerts-detail-/)[0];
+        expect(detail).toBeInTheDocument();
+    });
+
+    it('all 3 filter selects expose accessible labels (R15)', () => {
+        withRouter(<AlertsScreen />);
+        expect(screen.getByLabelText(/channel/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/severity/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/status/i)).toBeInTheDocument();
     });
 });
 

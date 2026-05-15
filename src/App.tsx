@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 import { Shell } from './components/Shell';
 import { OverviewScreen } from './features/overview/OverviewScreen';
+import { AlertsScreen } from './features/alerts/AlertsScreen';
 import { DsarScreen } from './features/dsar/DsarScreen';
 import { ConsentScreen } from './features/consent/ConsentScreen';
 import { RisksScreen } from './features/risks/RisksScreen';
@@ -29,6 +30,7 @@ export function App() {
             <Routes>
                 <Route element={<Shell />}>
                     <Route index element={<OverviewScreen />} />
+                    <Route path="alerts" element={<AlertsScreen />} />
                     <Route path="dsar" element={<DsarScreen />} />
                     <Route path="consent" element={<ConsentScreen />} />
                     <Route path="risks" element={<RisksScreen />} />
