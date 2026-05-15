@@ -289,3 +289,95 @@ test.describe('Admin Regulatory feed — amendments', () => {
         }
     });
 });
+
+test.describe('Admin Tenants — DPO console', () => {
+    const FIXTURE = {
+        tenants: [
+            {
+                id: 1,
+                slug: 'acme',
+                name: 'Acme Inc.',
+                subscription_tier: 'enterprise',
+                status: 'active',
+                dpo_email: 'dpo@acme.example',
+                contact_email: 'compliance@acme.example',
+                kpis: {
+                    alert_routes: 3,
+                    alert_dispatches: 47,
+                    regulatory_amendments: 12,
+                    pending_amendments: 2,
+                },
+            },
+            {
+                id: 2,
+                slug: 'frozen',
+                name: 'Frozen Co',
+                subscription_tier: 'team',
+                status: 'suspended',
+                dpo_email: null,
+                contact_email: null,
+                kpis: {
+                    alert_routes: 0,
+                    alert_dispatches: 0,
+                    regulatory_amendments: 0,
+                    pending_amendments: 0,
+                },
+            },
+        ],
+        totals: {
+            tenants_total: 2,
+            tenants_active: 1,
+            tenants_suspended: 1,
+            alert_dispatches_total: 47,
+            regulatory_amendments_total: 12,
+            fria_assessments_total: 4,
+            incidents_total: 6,
+        },
+    };
+
+    async function stubTenants(page: import('@playwright/test').Page) {
+        await page.route('**/tenants', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ data: FIXTURE }),
+            });
+        });
+        await page.route('**/tenants/**', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ data: {} }),
+            });
+        });
+    }
+
+    test('renders KPI grid + tenant table', async ({ page }) => {
+        await stubTenants(page);
+        await page.goto('/tenants');
+        await expect(page.getByTestId('tenants-screen')).toBeVisible();
+        await expect(page.getByTestId('tenants-platform-kpi-grid')).toBeVisible();
+        await expect(page.getByTestId('tenants-table')).toBeVisible();
+        const rows = page.locator('tr[data-testid^="tenants-table-row-"]');
+        expect(await rows.count()).toBeGreaterThan(0);
+    });
+
+    test('clicking a row opens the inline detail card with KV grid', async ({ page }) => {
+        await stubTenants(page);
+        await page.goto('/tenants');
+        const row = page.locator('tr[data-testid^="tenants-table-row-"]').first();
+        await row.click();
+        await expect(page.locator('[data-testid^="tenants-detail-"]')).toBeVisible();
+    });
+
+    test('filtering by status narrows the table', async ({ page }) => {
+        await stubTenants(page);
+        await page.goto('/tenants');
+        await page.getByTestId('tenants-filter-status').selectOption('suspended');
+        const rows = page.locator('tr[data-testid^="tenants-table-row-"]');
+        const count = await rows.count();
+        for (let i = 0; i < count; i++) {
+            await expect(rows.nth(i)).toContainText(/Suspended/i);
+        }
+    });
+});

@@ -24,6 +24,7 @@ import { IncidentsScreen } from '../../src/features/incidents/IncidentsScreen';
 import { BiasScreen } from '../../src/features/bias/BiasScreen';
 import { DpoScreen } from '../../src/features/dpo/DpoScreen';
 import { RegulatoryScreen } from '../../src/features/regulatory/RegulatoryScreen';
+import { TenantsScreen } from '../../src/features/tenants/TenantsScreen';
 import { SettingsScreen } from '../../src/features/settings/SettingsScreen';
 
 function renderWithRouter(node: React.ReactNode) {
@@ -107,6 +108,14 @@ describe('Compliance admin screens render', () => {
         expect(getByTestId('regulatory-filter-bar')).toBeTruthy();
         expect(getByTestId('regulatory-table')).toBeTruthy();
         expect(getByTestId('regulatory-poll-now')).toBeTruthy();
+    });
+
+    it('TenantsScreen renders platform KPI grid + filter bar + table', () => {
+        const { getByTestId } = renderWithRouter(<TenantsScreen />);
+        expect(getByTestId('tenants-screen')).toBeTruthy();
+        expect(getByTestId('tenants-platform-kpi-grid')).toBeTruthy();
+        expect(getByTestId('tenants-filter-bar')).toBeTruthy();
+        expect(getByTestId('tenants-table')).toBeTruthy();
     });
 
     it('SettingsScreen renders flags, env vars, webhooks', () => {

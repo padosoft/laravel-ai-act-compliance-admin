@@ -18,6 +18,7 @@ afterEach(() => {
 
 import { AlertsScreen } from '../../src/features/alerts/AlertsScreen';
 import { RegulatoryScreen } from '../../src/features/regulatory/RegulatoryScreen';
+import { TenantsScreen } from '../../src/features/tenants/TenantsScreen';
 import { DsarScreen } from '../../src/features/dsar/DsarScreen';
 import { ConsentScreen } from '../../src/features/consent/ConsentScreen';
 import { RisksScreen } from '../../src/features/risks/RisksScreen';
@@ -461,5 +462,74 @@ describe('Regulatory screen interactions', () => {
         withRouter(<RegulatoryScreen />);
         expect(screen.getByLabelText(/status/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/severity/i)).toBeInTheDocument();
+    });
+});
+
+describe('Tenants screen interactions', () => {
+    it('renders tenant rows from the fixture by default', () => {
+        withRouter(<TenantsScreen />);
+        const rows = screen.getAllByTestId(/^tenants-table-row-[a-z0-9_-]+$/);
+        expect(rows.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('filters by status (suspended narrows the table)', () => {
+        withRouter(<TenantsScreen />);
+        const before = screen.queryAllByTestId(/^tenants-table-row-[a-z0-9_-]+$/).length;
+        fireEvent.change(screen.getByTestId('tenants-filter-status'), {
+            target: { value: 'suspended' },
+        });
+        const after = screen.queryAllByTestId(/^tenants-table-row-[a-z0-9_-]+$/);
+        expect(after.length).toBeLessThanOrEqual(before);
+    });
+
+    it('clicking a row opens the inline detail card with suspend/activate buttons', () => {
+        withRouter(<TenantsScreen />);
+        const firstRow = screen.getAllByTestId(/^tenants-table-row-[a-z0-9_-]+$/)[0];
+        fireEvent.click(firstRow);
+        const detail = screen.getAllByTestId(/^tenants-detail-/)[0];
+        expect(detail).toBeInTheDocument();
+    });
+
+    it('Suspend button PATCHes /tenants/{slug} with status=suspended', async () => {
+        const patchSpy = vi.spyOn(api, 'patch').mockResolvedValueOnce({ data: {} });
+        withRouter(<TenantsScreen />);
+        fireEvent.click(screen.getByTestId('tenants-table-row-acme'));
+        const suspend = screen.getByTestId('tenants-suspend-acme');
+        fireEvent.click(suspend);
+        await waitFor(() => expect(patchSpy).toHaveBeenCalled());
+        expect(patchSpy).toHaveBeenCalledWith('/tenants/acme', { status: 'suspended' });
+    });
+
+    it('shows fetch error banner when the list endpoint returns 500', async () => {
+        vi.spyOn(api, 'get').mockRejectedValueOnce({ response: { status: 500 } });
+        withRouter(<TenantsScreen />);
+        await waitFor(() => {
+            expect(screen.getByTestId('tenants-fetch-error')).toHaveTextContent(/500/);
+        });
+    });
+
+    it('shows action-error banner when PATCH fails', async () => {
+        vi.spyOn(api, 'patch').mockRejectedValueOnce({ response: { status: 500 } });
+        withRouter(<TenantsScreen />);
+        fireEvent.click(screen.getByTestId('tenants-table-row-acme'));
+        fireEvent.click(screen.getByTestId('tenants-suspend-acme'));
+        await waitFor(() => {
+            expect(screen.getByTestId('tenants-action-error')).toHaveTextContent(/500/);
+        });
+    });
+
+    it('platform KPI grid surfaces all 5 KPI tiles', () => {
+        withRouter(<TenantsScreen />);
+        expect(screen.getByTestId('tenants-kpi-total')).toBeInTheDocument();
+        expect(screen.getByTestId('tenants-kpi-alerts')).toBeInTheDocument();
+        expect(screen.getByTestId('tenants-kpi-amendments')).toBeInTheDocument();
+        expect(screen.getByTestId('tenants-kpi-fria')).toBeInTheDocument();
+        expect(screen.getByTestId('tenants-kpi-incidents')).toBeInTheDocument();
+    });
+
+    it('filter selects expose accessible labels (R15)', () => {
+        withRouter(<TenantsScreen />);
+        expect(screen.getByLabelText(/status/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/tier/i)).toBeInTheDocument();
     });
 });

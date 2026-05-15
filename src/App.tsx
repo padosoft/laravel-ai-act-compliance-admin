@@ -11,6 +11,7 @@ import { IncidentsScreen } from './features/incidents/IncidentsScreen';
 import { BiasScreen } from './features/bias/BiasScreen';
 import { DpoScreen } from './features/dpo/DpoScreen';
 import { RegulatoryScreen } from './features/regulatory/RegulatoryScreen';
+import { TenantsScreen } from './features/tenants/TenantsScreen';
 import { SettingsScreen } from './features/settings/SettingsScreen';
 
 import './styles-base.css';
@@ -40,6 +41,7 @@ export function App() {
                     <Route path="bias" element={<BiasScreen />} />
                     <Route path="dpo" element={<DpoScreen />} />
                     <Route path="regulatory" element={<RegulatoryScreen />} />
+                    <Route path="tenants" element={<TenantsScreen />} />
                     <Route path="settings" element={<SettingsScreen />} />
                 </Route>
             </Routes>

@@ -27,6 +27,7 @@ export const ROUTES: RouteEntry[] = [
     { key: 'bias', path: '/bias', label: 'Bias Monitor', icon: I.Scale, section: 'Risk Management' },
     { key: 'dpo', path: '/dpo', label: 'DPO Console', icon: I.Briefcase, section: 'Governance' },
     { key: 'regulatory', path: '/regulatory', label: 'Regulatory Feed', icon: I.FileText, section: 'Governance' },
+    { key: 'tenants', path: '/tenants', label: 'Tenants', icon: I.Briefcase, section: 'Governance' },
     { key: 'settings', path: '/settings', label: 'Settings', icon: I.Settings, section: 'Governance' },
 ];
 

@@ -31,6 +31,7 @@ test.describe('Admin shell + navigation', () => {
             { key: 'bias', screenTestid: 'bias-screen' },
             { key: 'dpo', screenTestid: 'dpo-screen' },
             { key: 'regulatory', screenTestid: 'regulatory-screen' },
+            { key: 'tenants', screenTestid: 'tenants-screen' },
             { key: 'settings', screenTestid: 'settings-screen' },
             { key: 'overview', screenTestid: 'overview-screen' },
         ];
