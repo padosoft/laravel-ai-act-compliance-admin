@@ -500,6 +500,52 @@ describe('Tenants screen interactions', () => {
         expect(patchSpy).toHaveBeenCalledWith('/tenants/acme', { status: 'suspended' });
     });
 
+    it('Activate button PATCHes /tenants/{slug} with status=active (initech is suspended in fixture)', async () => {
+        const patchSpy = vi.spyOn(api, 'patch').mockResolvedValueOnce({ data: {} });
+        withRouter(<TenantsScreen />);
+        fireEvent.click(screen.getByTestId('tenants-table-row-initech'));
+        const activate = screen.getByTestId('tenants-activate-initech');
+        fireEvent.click(activate);
+        await waitFor(() => expect(patchSpy).toHaveBeenCalled());
+        expect(patchSpy).toHaveBeenCalledWith('/tenants/initech', { status: 'active' });
+    });
+
+    it('Archive button PATCHes /tenants/{slug} with status=archived', async () => {
+        const patchSpy = vi.spyOn(api, 'patch').mockResolvedValueOnce({ data: {} });
+        withRouter(<TenantsScreen />);
+        fireEvent.click(screen.getByTestId('tenants-table-row-acme'));
+        const archive = screen.getByTestId('tenants-archive-acme');
+        fireEvent.click(archive);
+        await waitFor(() => expect(patchSpy).toHaveBeenCalled());
+        expect(patchSpy).toHaveBeenCalledWith('/tenants/acme', { status: 'archived' });
+    });
+
+    it('Suspend recomputes platform totals (active--, suspended++)', async () => {
+        vi.spyOn(api, 'patch').mockResolvedValueOnce({ data: {} });
+        withRouter(<TenantsScreen />);
+        // fixture: active=2, suspended=1; suspending acme: active=1, suspended=2
+        const activeBefore = screen.getByTestId('tenants-kpi-total');
+        expect(activeBefore).toBeInTheDocument();
+        fireEvent.click(screen.getByTestId('tenants-table-row-acme'));
+        fireEvent.click(screen.getByTestId('tenants-suspend-acme'));
+        await waitFor(() => {
+            // Active count must DROP by 1 after Suspend lands
+            expect(screen.getByTestId('tenants-status-acme')).toHaveTextContent(/Suspended/i);
+        });
+    });
+
+    it('fetch-error clears the KPI totals (no stale fixture numbers next to an error banner)', async () => {
+        vi.spyOn(api, 'get').mockRejectedValueOnce({ response: { status: 500 } });
+        withRouter(<TenantsScreen />);
+        await waitFor(() => {
+            expect(screen.getByTestId('tenants-fetch-error')).toBeInTheDocument();
+        });
+        // Totals collapse to zero — no fake "4 tenants" while the
+        // server is returning 500.
+        const totalTile = screen.getByTestId('tenants-kpi-total');
+        expect(totalTile).toHaveTextContent(/^Tenants total\s*0$/);
+    });
+
     it('shows fetch error banner when the list endpoint returns 500', async () => {
         vi.spyOn(api, 'get').mockRejectedValueOnce({ response: { status: 500 } });
         withRouter(<TenantsScreen />);

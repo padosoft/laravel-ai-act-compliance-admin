@@ -981,8 +981,12 @@ export const REGULATORY_AMENDMENTS: RegulatoryAmendmentRow[] = [
 // v1.5 — DPO multi-org tenant management. Mirrors the `tenants`
 // schema in `padosoft/laravel-ai-act-compliance` v1.5. In production
 // the admin SPA hydrates the list from
-// `GET /api/admin/ai-act-compliance/tenants` and switches the active
-// tenant via the `X-Tenant-Id` request header.
+// `GET /api/admin/ai-act-compliance/tenants`. The backend supports an
+// `X-Tenant-Id` request header (see
+// `Padosoft\AiActCompliance\MultiTenancy\Http\Middleware\TenantContextMiddleware`)
+// but THIS SPA does not yet wire a tenant-switcher onto the axios
+// client — that lands in a follow-up SPA release. For now the
+// screen is a read-only / triage cross-tenant DPO console.
 export type SubscriptionTier = 'free' | 'team' | 'enterprise';
 export type TenantStatus = 'active' | 'suspended' | 'archived';
 

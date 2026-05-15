@@ -108,6 +108,36 @@ type FetchState =
     | { kind: 'live' }
     | { kind: 'error'; message: string };
 
+const EMPTY_TOTALS: TenantPlatformTotals = {
+    tenants_total: 0,
+    tenants_active: 0,
+    tenants_suspended: 0,
+    alert_dispatches_total: 0,
+    regulatory_amendments_total: 0,
+    fria_assessments_total: 0,
+    incidents_total: 0,
+};
+
+/**
+ * Roll the per-tenant status delta into the platform totals so the
+ * KPI grid stays consistent with the table immediately after a
+ * Suspend / Activate / Archive PATCH. Copilot iter-1 on PR #8.
+ */
+function applyStatusDeltaToTotals(
+    prev: TenantPlatformTotals,
+    fromStatus: TenantStatus,
+    toStatus: TenantStatus,
+): TenantPlatformTotals {
+    if (fromStatus === toStatus) return prev;
+    const next: TenantPlatformTotals = { ...prev };
+    if (fromStatus === 'active') next.tenants_active = Math.max(0, next.tenants_active - 1);
+    if (fromStatus === 'suspended') next.tenants_suspended = Math.max(0, next.tenants_suspended - 1);
+    if (toStatus === 'active') next.tenants_active = next.tenants_active + 1;
+    if (toStatus === 'suspended') next.tenants_suspended = next.tenants_suspended + 1;
+
+    return next;
+}
+
 export function TenantsScreen() {
     const [tenants, setTenants] = useState<TenantRow[]>(TENANTS);
     const [totals, setTotals] = useState<TenantPlatformTotals>(TENANT_PLATFORM_TOTALS);
@@ -130,6 +160,11 @@ export function TenantsScreen() {
             }
             if (outcome.kind === 'unauthorized') {
                 setTenants([]);
+                // Reset the totals too: leaving the fixture KPIs in
+                // place over an unauthorized response would surface
+                // a populated dashboard next to a "not authorized"
+                // banner. Copilot iter-1 on PR #8.
+                setTotals(EMPTY_TOTALS);
                 setSelectedSlug(null);
                 setFetchState({
                     kind: 'error',
@@ -141,6 +176,7 @@ export function TenantsScreen() {
             if (outcome.kind === 'server-error') {
                 const suffix = outcome.status ? ` (HTTP ${outcome.status})` : '';
                 setTenants([]);
+                setTotals(EMPTY_TOTALS);
                 setSelectedSlug(null);
                 setFetchState({
                     kind: 'error',
@@ -173,6 +209,9 @@ export function TenantsScreen() {
     );
 
     const updateTenantStatus = async (slug: string, nextStatus: TenantStatus) => {
+        // Capture the current status BEFORE the PATCH so we can
+        // roll the delta into the platform totals symmetrically.
+        const prevStatus = tenants.find((r) => r.slug === slug)?.status;
         try {
             await api.patch(`/tenants/${slug}`, { status: nextStatus });
             setActionError(null);
@@ -197,6 +236,11 @@ export function TenantsScreen() {
                     : row,
             ),
         );
+        if (prevStatus && prevStatus !== nextStatus) {
+            setTotals((current) =>
+                applyStatusDeltaToTotals(current, prevStatus, nextStatus),
+            );
+        }
     };
 
     return (
