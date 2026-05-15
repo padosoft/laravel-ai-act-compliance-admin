@@ -257,11 +257,6 @@ export function AlertsScreen() {
                             <tr
                                 key={row.id}
                                 onClick={() => setSelectedId(row.id)}
-<<<<<<< HEAD
-                                onKeyDown={(event) => {
-                                    if (event.key === 'Enter' || event.key === ' ') {
-                                        event.preventDefault();
-=======
                                 onKeyDown={(e) => {
                                     // Ignore Enter/Space that bubbled from
                                     // a nested action button — the action
@@ -274,16 +269,12 @@ export function AlertsScreen() {
                                     }
                                     if (e.key === 'Enter' || e.key === ' ') {
                                         e.preventDefault();
->>>>>>> ce79bd1 (fix(v1.3/iter-2): close Copilot review findings on PR #6)
                                         setSelectedId(row.id);
                                     }
                                 }}
                                 tabIndex={0}
-<<<<<<< HEAD
-=======
                                 role="button"
                                 aria-label={`Open dispatch ${row.id}`}
->>>>>>> ce79bd1 (fix(v1.3/iter-2): close Copilot review findings on PR #6)
                                 data-testid={`alerts-table-row-${row.id}`}
                                 style={{ cursor: 'pointer' }}
                             >
