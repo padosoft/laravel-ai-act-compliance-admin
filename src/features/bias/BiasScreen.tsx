@@ -1,28 +1,136 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
+import { api } from '../../api/client';
 import { I } from '../../components/Icons';
 import { ArticleRef } from '../../components/Primitives';
-import { COHORT_DATA, COHORT_DIMENSIONS } from '../../lib/mock-data';
+import {
+    BIAS_METRICS,
+    COHORT_DATA,
+    COHORT_DIMENSIONS,
+    biasMetricDataFor,
+    type BiasMetricMeta,
+} from '../../lib/mock-data';
+
+/**
+ * Fetch the live bias-metrics list from the BE via the shared admin
+ * API client. Production hosts expose
+ * `GET /api/admin/ai-act-compliance/bias/metrics` (planned in
+ * laravel-ai-act-compliance v1.2.1 — the BE endpoint follows the
+ * service-layer v1.2 in PR #2). Falls back to the bundled fixture
+ * when the endpoint is unreachable (dev, network failure, or v1.2
+ * BE without the metadata endpoint yet) so host-app custom metrics
+ * surface as soon as the endpoint ships without an SPA bump.
+ *
+ * R18 (derive-from-DB-not-literal) — the dropdown contents are
+ * derived from the live registry whenever it answers, fixture is
+ * the dev/seed fallback. R14 (surface-failures-loudly) — fetch
+ * failures are logged via `console.warn` (the operator sees the
+ * fallback path was taken in the browser console); we deliberately
+ * do NOT surface a page-level error because the fixture is a valid
+ * degraded mode.
+ */
+async function fetchBiasMetrics(signal: AbortSignal): Promise<BiasMetricMeta[] | null> {
+    try {
+        const response = await api.get<{ data?: BiasMetricMeta[] } | BiasMetricMeta[]>(
+            '/bias/metrics',
+            { signal },
+        );
+        const payload = response.data;
+        if (Array.isArray(payload)) {
+            return payload;
+        }
+        if (payload && Array.isArray(payload.data)) {
+            return payload.data;
+        }
+        return null;
+    } catch (error) {
+        // Per the docblock: surface the fallback decision so an
+        // operator inspecting the browser console can tell the
+        // fixture is in play.
+        if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+            console.warn('[BiasScreen] /bias/metrics unreachable; falling back to bundled fixture.', error);
+        }
+        return null;
+    }
+}
 
 export function BiasScreen() {
     const [dimension, setDimension] = useState<string>('language');
-    const data = COHORT_DATA[dimension] ?? COHORT_DATA.language;
+    // v1.2 — Pluggable parity metrics. The dropdown lets a DPO switch
+    // between Demographic Parity, Equalized Odds, and Calibration (or
+    // any host-app custom metric returned by the bias-metrics
+    // metadata endpoint in production).
+    const [metricId, setMetricId] = useState<string>('demographic_parity');
+    // Live registry list — falls back to the bundled fixture when the
+    // BE endpoint is unreachable (see fetchBiasMetrics docblock).
+    const [liveMetrics, setLiveMetrics] = useState<BiasMetricMeta[] | null>(null);
+    useEffect(() => {
+        const controller = new AbortController();
+        void fetchBiasMetrics(controller.signal).then((result) => {
+            if (result && result.length > 0) {
+                setLiveMetrics(result);
+            }
+        });
+        return () => controller.abort();
+    }, []);
+    const availableMetrics = liveMetrics ?? BIAS_METRICS;
+    const metricMeta = availableMetrics.find((m) => m.id === metricId) ?? availableMetrics[0];
+    // The per-metric transform on the cohort dataset ensures switching
+    // metric ACTUALLY recomputes the chart numbers + worst-cohort +
+    // overall accuracy — Copilot review on PR #5 caught a stale-data
+    // bug where only the label/article-evidence updated. Memoised so
+    // the transform doesn't re-run on every render.
+    const baseData = COHORT_DATA[dimension] ?? COHORT_DATA.language;
+    const transformedData = useMemo(
+        () => biasMetricDataFor(metricId, baseData),
+        [metricId, baseData],
+    );
+    // Host-app custom metrics surfaced by the live registry may not
+    // have a SPA-side transform — the fixture-only screen renders an
+    // empty state in that case instead of misattributing demographic-
+    // parity numbers to the custom metric (Copilot review PR #5).
+    const data = transformedData ?? baseData;
+    const isUnknownMetric = transformedData === null;
     const dimensionMeta = COHORT_DIMENSIONS.find((d) => d.id === dimension);
 
-    const worstRow = useMemo(
-        () => data.rows.reduce((acc, row) => (row.accuracy < acc.accuracy ? row : acc), data.rows[0]),
-        [data],
-    );
+    // \"Worst cohort\" semantics depend on the metric:
+    //  - For accuracy / Demographic Parity / Equalized Odds the LOWEST
+    //    score is worst (lower accuracy / lower positive-rate / lower
+    //    compound rate means the cohort under-performs the population).
+    //  - For Calibration the HIGHEST score is worst (calibration is a
+    //    GAP metric — bigger gap = more miscalibrated).
+    // Without this branch a Calibration view would highlight the
+    // BEST-calibrated cohort as the worst, which Copilot review on
+    // PR #5 (commit 5169694) caught.
+    const worstRow = useMemo(() => {
+        const isGapMetric = metricId === 'calibration';
+        return data.rows.reduce(
+            (acc, row) => {
+                if (isGapMetric) {
+                    return row.accuracy > acc.accuracy ? row : acc;
+                }
+                return row.accuracy < acc.accuracy ? row : acc;
+            },
+            data.rows[0],
+        );
+    }, [data, metricId]);
 
     return (
         <div className="page" data-testid="bias-screen" data-state="ready">
             <div className="page-head">
                 <div>
                     <h1 className="page-title">Bias Monitor</h1>
-                    <p className="page-sub">
-                        Cohort parity tracking · AI Act Art. 10 (training data) + Art. 15 (accuracy + robustness) ·{' '}
-                        {COHORT_DIMENSIONS.length} dimensions
+                    <p className="page-sub" data-testid="bias-page-sub">
+                        Cohort parity tracking · {metricMeta.label} · {COHORT_DIMENSIONS.length} dimensions
                     </p>
+                    <div
+                        style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}
+                        data-testid="bias-article-evidence"
+                    >
+                        {metricMeta.articleEvidence.map((article) => (
+                            <ArticleRef key={article}>{article}</ArticleRef>
+                        ))}
+                    </div>
                 </div>
                 <div className="page-actions">
                     <button type="button" className="btn"><I.Download size={13} /> Export cohort report</button>
@@ -31,8 +139,24 @@ export function BiasScreen() {
 
             <div className="filter-bar">
                 <div className="filter-group">
-                    <label className="filter-label">Cohort dimension</label>
+                    <label className="filter-label" htmlFor="bias-metric-name">Parity metric</label>
                     <select
+                        id="bias-metric-name"
+                        value={metricId}
+                        onChange={(event) => setMetricId(event.target.value)}
+                        data-testid="bias-metric-name"
+                    >
+                        {availableMetrics.map((metric) => (
+                            <option key={metric.id} value={metric.id}>
+                                {metric.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div className="filter-group">
+                    <label className="filter-label" htmlFor="bias-dimension">Cohort dimension</label>
+                    <select
+                        id="bias-dimension"
                         value={dimension}
                         onChange={(event) => setDimension(event.target.value)}
                         data-testid="bias-dimension"
@@ -45,7 +169,20 @@ export function BiasScreen() {
                     </select>
                 </div>
                 <div className="filter-group">
-                    <label className="filter-label">Overall accuracy</label>
+                    {/*
+                     * Label tracks the active metric — calling a
+                     * Calibration GAP score "Overall accuracy" would
+                     * mislead reviewers. Demographic Parity surfaces
+                     * the positive-rate; Equalized Odds + Calibration
+                     * surface their respective per-cohort statistic.
+                     */}
+                    <label className="filter-label" data-testid="bias-overall-label">
+                        {metricId === 'demographic_parity'
+                            ? 'Overall accuracy'
+                            : metricId === 'calibration'
+                            ? 'Calibration gap'
+                            : metricMeta.label}
+                    </label>
                     <span className="mono large" data-testid="bias-overall">
                         {(data.overall * 100).toFixed(1)}%
                     </span>
@@ -64,12 +201,21 @@ export function BiasScreen() {
                 <div className="card">
                     <div className="card-head">
                         <div>
-                            <h3 className="card-title">Accuracy parity per segment</h3>
+                            <h3 className="card-title">{metricMeta.label} per segment</h3>
                             <p className="card-sub">95% CI band, sample size weighted</p>
                         </div>
                     </div>
                     <div className="card-body">
-                        <CohortParityChart rows={data.rows} overall={data.overall} />
+                        {isUnknownMetric ? (
+                            <div className="empty" data-testid="bias-unknown-metric-empty">
+                                No SPA-side fixture data for the host-app custom metric
+                                <b> {metricMeta.label}</b>. Hosts that ship the BE
+                                metadata endpoint should also supply a matching dataset
+                                payload via <code>/bias/snapshots</code>.
+                            </div>
+                        ) : (
+                            <CohortParityChart rows={data.rows} overall={data.overall} />
+                        )}
                     </div>
                 </div>
 

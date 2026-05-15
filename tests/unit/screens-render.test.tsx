@@ -1,6 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+
+import { api } from '../../src/api/client';
+
+// v1.2 — BiasScreen fires a best-effort fetch via the shared axios
+// client on mount; stub it to reject so the rendered tree falls back
+// to the fixture. Restore in afterEach.
+beforeEach(() => {
+    vi.spyOn(api, 'get').mockRejectedValue(new Error('test: endpoint unreachable'));
+});
+afterEach(() => {
+    vi.restoreAllMocks();
+});
 
 import { OverviewScreen } from '../../src/features/overview/OverviewScreen';
 import { DsarScreen } from '../../src/features/dsar/DsarScreen';

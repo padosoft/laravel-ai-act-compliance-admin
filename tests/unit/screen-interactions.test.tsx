@@ -1,6 +1,20 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+
+import { api } from '../../src/api/client';
+import type { BiasMetricMeta } from '../../src/lib/mock-data';
+
+// v1.2 — BiasScreen fires a best-effort fetch via the shared axios
+// client to /bias/metrics on mount. Stub `api.get` to reject by
+// default so the screen falls back to the fixture; restore in
+// afterEach (R16 — global mocks are restored after every test).
+beforeEach(() => {
+    vi.spyOn(api, 'get').mockRejectedValue(new Error('test: endpoint unreachable'));
+});
+afterEach(() => {
+    vi.restoreAllMocks();
+});
 
 import { DsarScreen } from '../../src/features/dsar/DsarScreen';
 import { ConsentScreen } from '../../src/features/consent/ConsentScreen';
@@ -139,6 +153,94 @@ describe('Bias screen interactions', () => {
     it('renders the overall accuracy badge', () => {
         withRouter(<BiasScreen />);
         expect(screen.getByTestId('bias-overall')).toBeInTheDocument();
+    });
+
+    // v1.2 — Pluggable parity metrics
+    it('renders the parity-metric selector with the 3 reference metrics', () => {
+        withRouter(<BiasScreen />);
+        const select = screen.getByTestId('bias-metric-name') as HTMLSelectElement;
+        expect(select.options.length).toBeGreaterThanOrEqual(3);
+        const labels = Array.from(select.options).map((opt) => opt.textContent ?? '');
+        expect(labels).toContain('Demographic Parity');
+        expect(labels).toContain('Equalized Odds');
+        expect(labels).toContain('Calibration');
+    });
+
+    it('parity-metric label appears in the page sub when the selection changes', () => {
+        withRouter(<BiasScreen />);
+        expect(screen.getByTestId('bias-page-sub').textContent).toContain('Demographic Parity');
+
+        const select = screen.getByTestId('bias-metric-name') as HTMLSelectElement;
+        fireEvent.change(select, { target: { value: 'equalized_odds' } });
+
+        expect(screen.getByTestId('bias-page-sub').textContent).toContain('Equalized Odds');
+    });
+
+    it('article-evidence row renders ArticleRef chips for the active metric', () => {
+        withRouter(<BiasScreen />);
+        const evidence = screen.getByTestId('bias-article-evidence');
+        // Demographic Parity surfaces Art. 10 + Art. 15
+        expect(evidence.textContent).toContain('AI Act Art. 10');
+        expect(evidence.textContent).toContain('AI Act Art. 15');
+
+        // Calibration surfaces ONLY Art. 15
+        const select = screen.getByTestId('bias-metric-name') as HTMLSelectElement;
+        fireEvent.change(select, { target: { value: 'calibration' } });
+        const evidenceAfter = screen.getByTestId('bias-article-evidence');
+        expect(evidenceAfter.textContent).toContain('AI Act Art. 15');
+        expect(evidenceAfter.textContent).not.toContain('AI Act Art. 10');
+    });
+
+    it('parity-metric select has an accessible name via the <label htmlFor> binding (R15)', () => {
+        withRouter(<BiasScreen />);
+        const select = screen.getByLabelText(/parity metric/i);
+        expect(select).toBeInTheDocument();
+        expect(select.getAttribute('data-testid')).toBe('bias-metric-name');
+    });
+
+    it('switching parity metric ACTUALLY recomputes the overall accuracy badge', () => {
+        // Copilot review on PR #5 caught a stale-data bug where
+        // switching metric only updated the label/article evidence
+        // while the chart kept the demographic-parity numbers. The
+        // overall accuracy badge MUST reflect the per-metric
+        // transform now.
+        withRouter(<BiasScreen />);
+        const beforeText = screen.getByTestId('bias-overall').textContent ?? '';
+        const select = screen.getByTestId('bias-metric-name') as HTMLSelectElement;
+        fireEvent.change(select, { target: { value: 'calibration' } });
+        const afterText = screen.getByTestId('bias-overall').textContent ?? '';
+        expect(afterText).not.toBe(beforeText);
+    });
+
+    it('live /bias/metrics 200 response populates the dropdown from the registry payload', async () => {
+        // Copilot review iter-3 on PR #5 (commit 5169694) flagged
+        // that the live-fetch 200 path had no test — a regression
+        // that ignored or mis-parsed the BE payload would pass. This
+        // test mocks the shared axios client's GET and verifies the
+        // registry-supplied custom metric appears in the dropdown
+        // after the async useEffect has resolved.
+        const apiSpy = vi.spyOn(api, 'get').mockResolvedValueOnce({
+            data: [
+                {
+                    id: 'host_custom_fairness',
+                    label: 'Host Custom Fairness',
+                    description: 'Host-supplied custom metric for v1.2 test.',
+                    articleEvidence: ['AI Act Art. 10'],
+                },
+            ],
+        } as unknown as { data: BiasMetricMeta[] });
+
+        withRouter(<BiasScreen />);
+
+        // waitFor() retries until the registry-supplied option lands
+        // in the DOM, giving the async useEffect time to resolve.
+        await waitFor(() => {
+            const dropdown = screen.getByTestId('bias-metric-name') as HTMLSelectElement;
+            const labels = Array.from(dropdown.options).map((opt) => opt.textContent ?? '');
+            expect(labels).toContain('Host Custom Fairness');
+        });
+
+        apiSpy.mockRestore();
     });
 });
 

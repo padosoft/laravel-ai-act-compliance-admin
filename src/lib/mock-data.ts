@@ -337,6 +337,182 @@ export const CONSENT_RATE: Record<string, ConsentRate> = {
     biometric_voice: { granted: 18.2, revoked: 2.4, never: 79.4, trend: [12, 13, 14, 14, 15, 16, 16, 17, 17, 18, 18, 18.2] },
 };
 
+// v1.2 — Pluggable parity metrics surface. Mirrors the
+// `bias.metrics` config in padosoft/laravel-ai-act-compliance v1.2.
+// In production the FE fetches this list from
+// `GET /api/admin/ai-act-compliance/bias/metrics` so a host-app
+// custom metric appears without a SPA bump; this fixture is the
+// dev/seed fallback when the metadata endpoint is unreachable.
+export interface BiasMetricMeta {
+    id: string;
+    label: string;
+    description: string;
+    articleEvidence: string[];
+}
+
+export const BIAS_METRICS: BiasMetricMeta[] = [
+    {
+        id: 'demographic_parity',
+        label: 'Demographic Parity',
+        description: 'P(prediction = positive | cohort) parity across cohorts.',
+        articleEvidence: ['AI Act Art. 10', 'AI Act Art. 15'],
+    },
+    {
+        id: 'equalized_odds',
+        label: 'Equalized Odds',
+        description: 'TPR + FPR parity per cohort; max(TPR-spread, FPR-spread).',
+        articleEvidence: ['AI Act Art. 10', 'AI Act Art. 15'],
+    },
+    {
+        id: 'calibration',
+        label: 'Calibration',
+        description: '|mean(score) − mean(label)| per cohort.',
+        articleEvidence: ['AI Act Art. 15'],
+    },
+];
+
+// v1.2 — Per-metric cohort dataset. The chart numbers MUST change
+// when the operator switches between Demographic Parity / Equalized
+// Odds / Calibration — otherwise the UI would show the SAME numbers
+// under a different metric label and mislead reviewers. The per-
+// metric variants are derived from the default accuracy-parity data
+// via metric-specific transforms:
+//   - demographic_parity: accuracy-as-positive-rate (the default).
+//   - equalized_odds: a monotone-INCREASING linear contraction
+//     (0.7×accuracy + 0.15) that produces a believable EO score
+//     from accuracy data — TPR + FPR composites tend to sit in a
+//     compressed range around 0.5–0.8, which the contraction
+//     simulates without flipping the per-cohort ranking.
+//   - calibration: a |x − overall| transform that turns accuracy
+//     into a calibration GAP score. Non-monotone, so the CI
+//     handler uses `calibrationCiGap()` to set the lower bound to 0
+//     when the original interval crosses `source.overall` (the
+//     |gap| is zero AT overall, so any interval containing it has a
+//     min-gap of 0). The component also flips its worst-cohort
+//     selector to \"max\" for this metric (see BiasScreen.tsx).
+// In production the FE swaps these fixtures for the live
+// `GET /api/admin/ai-act-compliance/bias/snapshots` payload (same
+// shape) so the same component renders both.
+//
+// Unknown metric ids — only reachable when the FE loaded a live
+// metrics list and the operator picks a host-app custom metric the
+// SPA doesn't know how to transform. Returning the demographic-
+// parity dataset under a different label is misleading; we return
+// `null` so the screen can surface an explicit \"no data for this
+// metric\" empty state instead. The Copilot review on PR #5 commit
+// 5169694 flagged the silent fallback.
+export function biasMetricDataFor(metricId: string, source: CohortData): CohortData | null {
+    switch (metricId) {
+        case 'demographic_parity':
+            return source;
+        case 'equalized_odds':
+            return transformCohortData(source, (accuracy) => 0.7 * accuracy + 0.15);
+        case 'calibration':
+            return transformCalibration(source);
+        default:
+            return null;
+    }
+}
+
+function transformCohortData(source: CohortData, transform: (accuracy: number) => number): CohortData {
+    return {
+        overall: round6(transform(source.overall)),
+        rows: source.rows.map((row) => {
+            // For monotone transforms the CI bounds preserve order; we
+            // still defensively bound by min/max so non-monotone
+            // transforms (e.g. calibration's |x − overall| variant
+            // routed through this helper) cannot invert the interval.
+            const lo = round6(transform(row.ciLow));
+            const hi = round6(transform(row.ciHigh));
+            return {
+                seg: row.seg,
+                samples: row.samples,
+                accuracy: round6(transform(row.accuracy)),
+                ciLow: Math.min(lo, hi),
+                ciHigh: Math.max(lo, hi),
+            };
+        }),
+        // Drift is also transformed — leaving it on the original
+        // accuracy scale would show demographic-parity drift behind
+        // a different metric label, which misleads reviewers. The
+        // per-week values get the same transform so the chart
+        // remains in-scale.
+        drift: source.drift
+            ? Object.fromEntries(
+                  Object.entries(source.drift).map(([cohort, series]) => [
+                      cohort,
+                      series.map((value) => round6(transform(value))),
+                  ]),
+              )
+            : undefined,
+        samples: source.samples,
+    };
+}
+
+function transformCalibration(source: CohortData): CohortData {
+    // Calibration is a GAP metric. Apply |x − overall| × 1.5, but
+    // compute it on the row.accuracy SCORE first, then derive the CI
+    // bounds via `calibrationCiGap()` — the abs() step is non-
+    // monotone, so we cannot reuse the linear transform helper's
+    // CI-preservation. The CI handler also accounts for intervals
+    // crossing `source.overall`: the |gap| is zero exactly at
+    // overall, so when [ciLow, ciHigh] straddles overall the
+    // calibration-gap interval MUST clamp the lower bound to 0
+    // instead of taking the smaller endpoint distance (Copilot
+    // review on PR #5 commit 5169694).
+    const gap = (x: number) => Math.abs(x - source.overall) * 1.5;
+    return {
+        overall: 0, // perfect calibration baseline; cohorts deviate
+        rows: source.rows.map((row) => {
+            const score = round6(gap(row.accuracy));
+            const [ciLow, ciHigh] = calibrationCiGap(row.ciLow, row.ciHigh, source.overall);
+            return {
+                seg: row.seg,
+                samples: row.samples,
+                accuracy: score,
+                ciLow,
+                ciHigh,
+            };
+        }),
+        drift: source.drift
+            ? Object.fromEntries(
+                  Object.entries(source.drift).map(([cohort, series]) => [
+                      cohort,
+                      series.map((value) => round6(gap(value))),
+                  ]),
+              )
+            : undefined,
+        samples: source.samples,
+    };
+}
+
+/**
+ * Compute the [low, high] calibration-gap interval for an original
+ * accuracy interval [a, b] around `overall`. The gap function is
+ * `g(x) = 1.5 × |x − overall|`. Cases:
+ *  - Interval entirely above overall (a > overall): g monotone-
+ *    increasing, so [g(a), g(b)].
+ *  - Interval entirely below overall (b < overall): g monotone-
+ *    decreasing, so [g(b), g(a)].
+ *  - Interval crosses overall (a ≤ overall ≤ b): the minimum gap is
+ *    0 (achieved at x = overall); the maximum gap is max(g(a), g(b)).
+ */
+function calibrationCiGap(a: number, b: number, overall: number): [number, number] {
+    const ga = Math.abs(a - overall) * 1.5;
+    const gb = Math.abs(b - overall) * 1.5;
+    if (a > overall) {
+        return [round6(ga), round6(gb)];
+    }
+    if (b < overall) {
+        return [round6(gb), round6(ga)];
+    }
+    return [0, round6(Math.max(ga, gb))];
+}
+
+function round6(value: number): number {
+    return Math.round(value * 1_000_000) / 1_000_000;
+}
+
 export interface CohortDimension {
     id: string;
     name: string;
