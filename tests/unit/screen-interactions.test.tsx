@@ -185,10 +185,17 @@ describe('Alerts screen interactions', () => {
     });
 
     it('pressing Enter on Retry does not also open the row details', async () => {
+        const postSpy = vi.spyOn(api, 'post').mockResolvedValueOnce({ data: {} });
         withRouter(<AlertsScreen />);
         expect(screen.queryByTestId('alerts-detail-ad_003')).not.toBeInTheDocument();
         const retryButton = screen.getByTestId('alerts-retry-ad_003');
         fireEvent.keyDown(retryButton, { key: 'Enter' });
+        // JSDOM key events don't synthesize a click like browsers do,
+        // so trigger the activation click after Enter.
+        fireEvent.click(retryButton);
+        await waitFor(() => {
+            expect(postSpy).toHaveBeenCalledWith('/alerts/dispatches/ad_003/retry');
+        });
         await waitFor(() => {
             expect(screen.queryByTestId('alerts-detail-ad_003')).not.toBeInTheDocument();
         });

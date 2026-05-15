@@ -277,8 +277,6 @@ export function AlertsScreen() {
                                     }
                                 }}
                                 tabIndex={0}
-                                role="button"
-                                aria-label={`Open dispatch ${row.id}`}
                                 data-testid={`alerts-table-row-${row.id}`}
                                 style={{ cursor: 'pointer' }}
                             >
