@@ -22,6 +22,7 @@ test.describe('Admin shell + navigation', () => {
         await page.goto('/');
 
         const pairs: { key: string; screenTestid: string }[] = [
+            { key: 'alerts', screenTestid: 'alerts-screen' },
             { key: 'dsar', screenTestid: 'dsar-screen' },
             { key: 'consent', screenTestid: 'consent-screen' },
             { key: 'risks', screenTestid: 'risks-screen' },

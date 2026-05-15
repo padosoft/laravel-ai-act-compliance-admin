@@ -16,6 +16,7 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
+import { AlertsScreen } from '../../src/features/alerts/AlertsScreen';
 import { DsarScreen } from '../../src/features/dsar/DsarScreen';
 import { ConsentScreen } from '../../src/features/consent/ConsentScreen';
 import { RisksScreen } from '../../src/features/risks/RisksScreen';
@@ -81,6 +82,123 @@ describe('Risks screen interactions', () => {
         const filteredCount = grid.querySelectorAll('[data-testid^="risk-card-"]').length;
         // Filtering should narrow the grid (unless every risk was high already)
         expect(filteredCount).toBeLessThanOrEqual(initialCardCount);
+    });
+});
+
+describe('Alerts screen interactions', () => {
+    it('renders dispatch rows from the fixture by default', () => {
+        withRouter(<AlertsScreen />);
+        // Anchored selector — un-anchored `^alerts-table-row-` would
+        // also match nested retry/open buttons whose testid shares the
+        // same prefix. Copilot iter-2 on PR #6.
+        const rows = screen.getAllByTestId(/^alerts-table-row-[a-z]+_[0-9]+$/);
+        expect(rows.length).toBeGreaterThanOrEqual(4);
+    });
+
+    it('filters rows by channel when the channel select changes', () => {
+        withRouter(<AlertsScreen />);
+        const before = screen.queryAllByTestId(/^alerts-table-row-[a-z]+_[0-9]+$/).length;
+        const select = screen.getByTestId('alerts-filter-channel') as HTMLSelectElement;
+        fireEvent.change(select, { target: { value: 'slack' } });
+        const after = screen.queryAllByTestId(/^alerts-table-row-[a-z]+_[0-9]+$/);
+        expect(after.length).toBeLessThanOrEqual(before);
+        after.forEach((row) => {
+            expect(row.textContent).toContain('slack');
+        });
+    });
+
+    it('filters by status (transient_failure surfaces retry buttons)', () => {
+        withRouter(<AlertsScreen />);
+        fireEvent.change(screen.getByTestId('alerts-filter-status'), {
+            target: { value: 'transient_failure' },
+        });
+        const retryButtons = screen.queryAllByTestId(/^alerts-retry-[a-z]+_[0-9]+$/);
+        expect(retryButtons.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('clicking a row opens the inline detail card', () => {
+        withRouter(<AlertsScreen />);
+        const firstRow = screen.getAllByTestId(/^alerts-table-row-[a-z]+_[0-9]+$/)[0];
+        fireEvent.click(firstRow);
+        const detail = screen.getAllByTestId(/^alerts-detail-/)[0];
+        expect(detail).toBeInTheDocument();
+    });
+
+    it('all 3 filter selects expose accessible labels (R15)', () => {
+        withRouter(<AlertsScreen />);
+        expect(screen.getByLabelText(/channel/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/severity/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/status/i)).toBeInTheDocument();
+    });
+
+    it('uses an empty successful API response as the source of truth', async () => {
+        vi.spyOn(api, 'get').mockResolvedValueOnce({ data: [] });
+        withRouter(<AlertsScreen />);
+        await waitFor(() => {
+            expect(screen.getByTestId('alerts-empty')).toBeInTheDocument();
+        });
+        expect(screen.queryAllByTestId(/^alerts-table-row-/)).toHaveLength(0);
+        expect(screen.queryByTestId('alerts-fetch-error')).not.toBeInTheDocument();
+    });
+
+    it('shows an explicit load error on server failures instead of fixture fallback', async () => {
+        vi.spyOn(api, 'get').mockRejectedValueOnce({
+            isAxiosError: true,
+            response: { status: 500 },
+        });
+        withRouter(<AlertsScreen />);
+        await waitFor(() => {
+            expect(screen.getByTestId('alerts-fetch-error')).toHaveTextContent('HTTP 500');
+        });
+        expect(screen.queryAllByTestId(/^alerts-table-row-/)).toHaveLength(0);
+    });
+
+    it('retry button calls the API and shows success feedback', async () => {
+        const postSpy = vi.spyOn(api, 'post').mockResolvedValueOnce({ data: {} });
+        withRouter(<AlertsScreen />);
+        const retryButton = screen.getByTestId('alerts-retry-ad_003');
+        fireEvent.click(retryButton);
+        expect(postSpy).toHaveBeenCalledWith('/alerts/dispatches/ad_003/retry');
+        await waitFor(() => {
+            expect(screen.getByTestId('alerts-retry-feedback')).toHaveTextContent('Retry requested.');
+        });
+    });
+
+    it('retry button shows loading state and failure feedback', async () => {
+        const deferred: { reject?: (error: Error) => void } = {};
+        vi.spyOn(api, 'post').mockImplementationOnce(
+            () =>
+                new Promise((_, reject) => {
+                    deferred.reject = reject as (error: Error) => void;
+                }),
+        );
+        withRouter(<AlertsScreen />);
+        const retryButton = screen.getByTestId('alerts-retry-ad_003');
+        fireEvent.click(retryButton);
+        expect(retryButton).toBeDisabled();
+        expect(retryButton).toHaveTextContent('Retrying…');
+        expect(deferred.reject).toBeDefined();
+        deferred.reject?.(new Error('boom'));
+        await waitFor(() => {
+            expect(screen.getByTestId('alerts-retry-feedback')).toHaveTextContent('Retry failed: boom');
+        });
+    });
+
+    it('pressing Enter on Retry does not also open the row details', async () => {
+        const postSpy = vi.spyOn(api, 'post').mockResolvedValueOnce({ data: {} });
+        withRouter(<AlertsScreen />);
+        expect(screen.queryByTestId('alerts-detail-ad_003')).not.toBeInTheDocument();
+        const retryButton = screen.getByTestId('alerts-retry-ad_003');
+        fireEvent.keyDown(retryButton, { key: 'Enter' });
+        // JSDOM key events don't synthesize a click like browsers do,
+        // so trigger the activation click after Enter.
+        fireEvent.click(retryButton);
+        await waitFor(() => {
+            expect(postSpy).toHaveBeenCalledWith('/alerts/dispatches/ad_003/retry');
+        });
+        await waitFor(() => {
+            expect(screen.queryByTestId('alerts-detail-ad_003')).not.toBeInTheDocument();
+        });
     });
 });
 
