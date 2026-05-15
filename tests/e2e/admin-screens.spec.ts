@@ -34,7 +34,54 @@ test.describe('Admin Risks — interactions', () => {
 });
 
 test.describe('Admin Alerts — dispatches', () => {
+    // The admin SPA's `/api/admin/ai-act-compliance/*` calls reach the
+    // companion Laravel backend in production. When running the SPA
+    // standalone in CI (no Laravel served), the fetch 404s and the
+    // iter-3 hardening clears the table + surfaces an error banner.
+    // For these UI-shape tests we stub the live endpoint via
+    // `page.route()` — allowed by R13 because the API is external to
+    // THIS admin-SPA repo.
+    const FIXTURE_DISPATCHES = [
+        {
+            id: 'ad_e2e_1',
+            channel: 'slack',
+            severity: 'critical',
+            status: 'ok',
+            title: 'Bias drift on demographic_parity',
+            tenantId: 'tenant-a',
+            metricName: 'demographic_parity',
+            cohort: 'language=it',
+            httpStatus: 200,
+            sentAt: new Date(Date.now() - 60_000).toISOString(),
+            errorMessage: null,
+        },
+        {
+            id: 'ad_e2e_2',
+            channel: 'discord',
+            severity: 'high',
+            status: 'transient_failure',
+            title: 'Bias drift on equalized_odds',
+            tenantId: 'tenant-b',
+            metricName: 'equalized_odds',
+            cohort: 'gender=f',
+            httpStatus: 503,
+            sentAt: new Date(Date.now() - 120_000).toISOString(),
+            errorMessage: 'Discord webhook returned 503',
+        },
+    ];
+
+    async function stubDispatches(page: import('@playwright/test').Page) {
+        await page.route('**/alerts/dispatches', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify(FIXTURE_DISPATCHES),
+            });
+        });
+    }
+
     test('renders the dispatch table and filter bar', async ({ page }) => {
+        await stubDispatches(page);
         await page.goto('/alerts');
         await expect(page.getByTestId('alerts-screen')).toBeVisible();
         await expect(page.getByTestId('alerts-table')).toBeVisible();
@@ -47,6 +94,7 @@ test.describe('Admin Alerts — dispatches', () => {
     });
 
     test('clicking a row opens the inline detail card', async ({ page }) => {
+        await stubDispatches(page);
         await page.goto('/alerts');
         const row = page.locator('tr[data-testid^="alerts-table-row-"]').first();
         await row.click();
@@ -54,6 +102,7 @@ test.describe('Admin Alerts — dispatches', () => {
     });
 
     test('filtering by severity narrows the table', async ({ page }) => {
+        await stubDispatches(page);
         await page.goto('/alerts');
         await page.getByTestId('alerts-filter-severity').selectOption('critical');
         const rows = page.locator('tr[data-testid^="alerts-table-row-"]');
