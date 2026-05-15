@@ -977,3 +977,116 @@ export const REGULATORY_AMENDMENTS: RegulatoryAmendmentRow[] = [
         triageNotes: 'Editorial only, no host action required.',
     },
 ];
+
+// v1.5 — DPO multi-org tenant management. Mirrors the `tenants`
+// schema in `padosoft/laravel-ai-act-compliance` v1.5. In production
+// the admin SPA hydrates the list from
+// `GET /api/admin/ai-act-compliance/tenants`. The backend supports an
+// `X-Tenant-Id` request header (see
+// `Padosoft\AiActCompliance\MultiTenancy\Http\Middleware\TenantContextMiddleware`)
+// but THIS SPA does not yet wire a tenant-switcher onto the axios
+// client — that lands in a follow-up SPA release. For now the
+// screen is a read-only / triage cross-tenant DPO console.
+export type SubscriptionTier = 'free' | 'team' | 'enterprise';
+export type TenantStatus = 'active' | 'suspended' | 'archived';
+
+export interface TenantKpis {
+    alert_routes: number;
+    alert_dispatches: number;
+    regulatory_amendments: number;
+    pending_amendments: number;
+}
+
+export interface TenantRow {
+    id: number;
+    slug: string;
+    name: string;
+    subscriptionTier: SubscriptionTier;
+    status: TenantStatus;
+    dpoEmail: string | null;
+    contactEmail: string | null;
+    kpis: TenantKpis;
+}
+
+export interface TenantPlatformTotals {
+    tenants_total: number;
+    tenants_active: number;
+    tenants_suspended: number;
+    alert_dispatches_total: number;
+    regulatory_amendments_total: number;
+    fria_assessments_total: number;
+    incidents_total: number;
+}
+
+export const TENANTS: TenantRow[] = [
+    {
+        id: 1,
+        slug: 'acme',
+        name: 'Acme Inc.',
+        subscriptionTier: 'enterprise',
+        status: 'active',
+        dpoEmail: 'dpo@acme.example',
+        contactEmail: 'compliance@acme.example',
+        kpis: {
+            alert_routes: 3,
+            alert_dispatches: 47,
+            regulatory_amendments: 12,
+            pending_amendments: 2,
+        },
+    },
+    {
+        id: 2,
+        slug: 'globex',
+        name: 'Globex Co.',
+        subscriptionTier: 'team',
+        status: 'active',
+        dpoEmail: 'dpo@globex.example',
+        contactEmail: 'ops@globex.example',
+        kpis: {
+            alert_routes: 2,
+            alert_dispatches: 18,
+            regulatory_amendments: 5,
+            pending_amendments: 1,
+        },
+    },
+    {
+        id: 3,
+        slug: 'initech',
+        name: 'Initech LLC',
+        subscriptionTier: 'team',
+        status: 'suspended',
+        dpoEmail: null,
+        contactEmail: 'billing@initech.example',
+        kpis: {
+            alert_routes: 1,
+            alert_dispatches: 3,
+            regulatory_amendments: 0,
+            pending_amendments: 0,
+        },
+    },
+    {
+        id: 4,
+        slug: 'umbrella',
+        name: 'Umbrella S.p.A.',
+        subscriptionTier: 'free',
+        status: 'archived',
+        dpoEmail: null,
+        contactEmail: null,
+        kpis: {
+            alert_routes: 0,
+            alert_dispatches: 0,
+            regulatory_amendments: 0,
+            pending_amendments: 0,
+        },
+    },
+];
+
+export const TENANT_PLATFORM_TOTALS: TenantPlatformTotals = {
+    tenants_total: 4,
+    tenants_active: 2,
+    tenants_suspended: 1,
+    alert_dispatches_total: 68,
+    regulatory_amendments_total: 17,
+    fria_assessments_total: 9,
+    incidents_total: 14,
+};
