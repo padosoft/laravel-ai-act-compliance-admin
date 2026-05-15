@@ -192,6 +192,13 @@ export function AlertsScreen() {
                             <tr
                                 key={row.id}
                                 onClick={() => setSelectedId(row.id)}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Enter' || event.key === ' ') {
+                                        event.preventDefault();
+                                        setSelectedId(row.id);
+                                    }
+                                }}
+                                tabIndex={0}
                                 data-testid={`alerts-table-row-${row.id}`}
                                 style={{ cursor: 'pointer' }}
                             >
