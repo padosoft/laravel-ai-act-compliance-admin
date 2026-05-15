@@ -86,7 +86,7 @@ This package gives you the **8 production-grade screens** out of the box. Pixel-
 
 ---
 
-## 🖥️ The eight screens
+## 🖥️ The eleven screens
 
 Every screen is a real React 19 component (not a scaffold). Each has loading / ready / error / empty `data-state` props for deterministic E2E testing, a11y landmarks, and keyboard navigation.
 
@@ -97,9 +97,12 @@ Every screen is a real React 19 component (not a scaffold). Each has loading / r
 | 3 | **Consent Overview** | Per-feature + per-user consent matrix | Tabs (Per feature / Per user) + feature cards with consent bar (granted / revoked / never) + sparkline + user matrix table |
 | 4 | **Risk Register** | AI Act Annex III risk catalogue | Category summary tiles (unacceptable / high / limited / low) + filter sidebar + card grid + drawer with article references |
 | 5 | **Incident Manager** | AI Act Art. 73 ticket lifecycle | 4-lane kanban (open / triage / mitigating / closed) + severity-coloured cards + drawer with timeline + mitigations + escalation tree |
-| 6 | **Bias Monitor** | AI Act Art. 10 cohort parity + drift | Cohort dimension selector + accuracy parity SVG chart with CI bands + 13-week drift multi-line chart + flagged samples table |
+| 6 | **Bias Monitor** *(v1.2 enhanced)* | AI Act Art. 10 cohort parity + drift | Pluggable parity-metric dropdown (DemographicParity / EqualizedOdds / Calibration) with per-metric article evidence + 13-week drift multi-line chart + flagged samples table + per-metric CI bands |
 | 7 | **DPO Console** | Retention + deletion + attestation | Data flow diagram (sankey-style SVG) + retention table + deletion log + Article 30 attestation modal with PDF generator |
 | 8 | **Settings** | Feature flags + env + webhooks | Spatie-style switches + masked env vars (show/hide secrets) + webhook destination cards with health status |
+| 9 | **Alerts** *(v1.3)* | Cohort-drift dispatch audit trail | Live-pill + channel / severity / status filter bar + dispatch table with permanent / transient pill + retry button on transient-failure rows + inline detail drawer with payload + decrypted endpoint + error message |
+| 10 | **Regulatory Feed** *(v1.4)* | EU AI Act amendment dashboard | Severity + status filter bar + amendment table with impacted clauses chip strip + Poll-now button + inline detail drawer with Mark triaged / Mark resolved / Ignore actions |
+| 11 | **Tenants** *(v1.5)* | DPO multi-org console | Platform KPI grid (total / active / suspended / alerts / amendments / FRIA / incidents) + tier + status filter bar + tenants table + inline detail drawer with Suspend / Activate / Archive actions |
 
 ### Cross-cutting UX
 
@@ -468,10 +471,13 @@ Both packages cooperate: the backend exposes `/api/ai-act-compliance/*`, the adm
 
 - [x] **v1.0** — Scaffold + handoff bundle
 - [x] **v1.1** — 8 fully-featured screens ported from the Claude Design handoff
-- [ ] **v1.2** — Tailwind v4 design system on top of the base CSS tokens
-- [ ] **v1.3** — TanStack Router migration (BrowserRouter → file-based routing)
-- [ ] **v1.4** — Real-time SSE feed for activity stream + incident state changes
-- [ ] **v2.0** — i18n full pass (10 languages) + tablet-optimised layouts
+- [x] **v1.2** ✅ shipped 2026-05-15 — Pluggable parity-metric dropdown on BiasScreen (DemographicParity / EqualizedOdds / Calibration with per-metric article evidence + 3-branch CI gap)
+- [x] **v1.3** ✅ shipped 2026-05-15 — `/alerts` screen: dispatch log + channel / severity / status filter bar + transient-failure retry button + inline detail drawer
+- [x] **v1.4** ✅ shipped 2026-05-15 — `/regulatory` screen: EU AI Act amendment dashboard + Poll-now + Mark triaged / Mark resolved / Ignore actions
+- [x] **v1.5** ✅ shipped 2026-05-15 — `/tenants` screen: DPO multi-org console with platform KPI grid + Suspend / Activate / Archive actions
+- [ ] **v1.6** — Tenant-switcher header dropdown (auto-attaches `X-Tenant-Id` to every axios call) + TanStack Router migration
+- [ ] **v1.7** — Real-time SSE feed for activity stream + incident state changes + alert dispatches
+- [ ] **v2.0** — i18n full pass (10 languages) + tablet-optimised layouts + Tailwind v4 design system
 
 ---
 
@@ -481,6 +487,10 @@ See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 
 Recent highlights:
 
+- **v1.5.0** (2026-05-15) — `/tenants` screen (DPO console): platform KPI grid (5 tiles) + status + tier filter + tenants table + inline detail drawer with Suspend / Activate / Archive PATCH actions + optimistic UI re-rolling platform totals; 71/71 vitest + Playwright/chromium green
+- **v1.4.0** (2026-05-15) — `/regulatory` screen: EU AI Act amendment dashboard + Poll-now button + Mark triaged / resolved / ignore actions; discriminated `FetchOutcome` for 401 / 5xx / network errors
+- **v1.3.0** (2026-05-15) — `/alerts` screen: dispatch audit table + transient-failure retry button + live-pill + keyboard-operable rows with nested-button stop-propagation guard; row-only Playwright selectors
+- **v1.2.0** (2026-05-15) — Pluggable parity-metric dropdown on `/bias`: surfaces DemographicParity / EqualizedOdds / Calibration with per-metric `article_evidence_json` chips + 3-branch CI gap on calibration crossing
 - **v1.1.0** (2026-05-14) — Ported the Claude Design handoff to 8 fully-featured screens
 - **v1.0.1** (2026-05-13) — Laravel 13 compatibility constraints
 - **v1.0.0** (2026-05-12) — Scaffold + handoff bundle + cross-mount foundation
