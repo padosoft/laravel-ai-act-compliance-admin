@@ -23,6 +23,7 @@ import { FriaScreen } from '../../src/features/fria/FriaScreen';
 import { IncidentsScreen } from '../../src/features/incidents/IncidentsScreen';
 import { BiasScreen } from '../../src/features/bias/BiasScreen';
 import { DpoScreen } from '../../src/features/dpo/DpoScreen';
+import { RegulatoryScreen } from '../../src/features/regulatory/RegulatoryScreen';
 import { SettingsScreen } from '../../src/features/settings/SettingsScreen';
 
 function renderWithRouter(node: React.ReactNode) {
@@ -98,6 +99,14 @@ describe('Compliance admin screens render', () => {
         expect(getByTestId('dpo-data-flow')).toBeTruthy();
         expect(getByTestId('dpo-retention')).toBeTruthy();
         expect(getByTestId('dpo-deletion')).toBeTruthy();
+    });
+
+    it('RegulatoryScreen renders amendments table + filter bar + poll button', () => {
+        const { getByTestId } = renderWithRouter(<RegulatoryScreen />);
+        expect(getByTestId('regulatory-screen')).toBeTruthy();
+        expect(getByTestId('regulatory-filter-bar')).toBeTruthy();
+        expect(getByTestId('regulatory-table')).toBeTruthy();
+        expect(getByTestId('regulatory-poll-now')).toBeTruthy();
     });
 
     it('SettingsScreen renders flags, env vars, webhooks', () => {

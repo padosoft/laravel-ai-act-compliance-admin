@@ -878,3 +878,102 @@ export const FEATURE_FLAGS: FeatureFlag[] = [
     { id: 'attestation_pdf', name: 'Auditor-ready PDF attestations', enabled: true, articles: ['AI Act Art. 11'] },
     { id: 'voice_biometric', name: 'Voice biometric auth (beta)', enabled: false, articles: ['AI Act Art. 5(1)(f)'] },
 ];
+
+// v1.4 — Regulatory change auto-flagger. Mirrors the
+// `regulatory_amendments` schema in
+// `padosoft/laravel-ai-act-compliance` v1.4. In production the FE
+// fetches the list from
+// `GET /api/admin/ai-act-compliance/regulatory-amendments?status=&severity=`
+// and triggers a manual poll via
+// `POST /api/admin/ai-act-compliance/regulatory-amendments/poll`.
+export type AmendmentStatus = 'pending' | 'triaged' | 'resolved' | 'ignored';
+export type AmendmentSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export interface RegulatoryAmendmentRow {
+    id: number;
+    tenantId: string | null;
+    sourceDriver: string;
+    externalId: string;
+    sourceUrl: string;
+    title: string;
+    summary: string | null;
+    impactedClauses: string[];
+    status: AmendmentStatus;
+    severity: AmendmentSeverity;
+    publishedAt: number | null;
+    ingestedAt: number;
+    triagedAt: number | null;
+    triagedBy: string | null;
+    triageNotes: string | null;
+}
+
+export const REGULATORY_AMENDMENTS: RegulatoryAmendmentRow[] = [
+    {
+        id: 1,
+        tenantId: null,
+        sourceDriver: 'eu-ai-act-rss',
+        externalId: 'urn:eur-lex:amend:2026-001',
+        sourceUrl: 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:amend-001',
+        title: 'Amendment to Art. 5 — clarification of prohibited AI practices',
+        summary: 'Tightens the wording of Art. 5(1)(a) on emotion-recognition systems in the workplace.',
+        impactedClauses: ['AI Act Art. 5'],
+        status: 'pending',
+        severity: 'critical',
+        publishedAt: hrAgo(8),
+        ingestedAt: hrAgo(7),
+        triagedAt: null,
+        triagedBy: null,
+        triageNotes: null,
+    },
+    {
+        id: 2,
+        tenantId: null,
+        sourceDriver: 'eu-ai-act-rss',
+        externalId: 'urn:eur-lex:amend:2026-002',
+        sourceUrl: 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:amend-002',
+        title: 'Updated risk-management-system requirements under Art. 9',
+        summary: 'Continuous monitoring obligations for high-risk AI providers.',
+        impactedClauses: ['AI Act Art. 9'],
+        status: 'triaged',
+        severity: 'critical',
+        publishedAt: hrAgo(36),
+        ingestedAt: hrAgo(35),
+        triagedAt: hrAgo(28),
+        triagedBy: 'dpo@padosoft.com',
+        triageNotes: 'Spike for v1.5 risk-register integration.',
+    },
+    {
+        id: 3,
+        tenantId: null,
+        sourceDriver: 'eu-ai-act-rss',
+        externalId: 'urn:eur-lex:amend:2026-003',
+        sourceUrl: 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:amend-003',
+        title: 'FRIA template revised — Art. 27 guidance',
+        summary: 'Adds three new mitigation fields to the fundamental-rights template.',
+        impactedClauses: ['AI Act Art. 27'],
+        status: 'pending',
+        severity: 'high',
+        publishedAt: hrAgo(60),
+        ingestedAt: hrAgo(58),
+        triagedAt: null,
+        triagedBy: null,
+        triageNotes: null,
+    },
+    {
+        id: 4,
+        tenantId: null,
+        sourceDriver: 'eu-ai-act-rss',
+        externalId: 'urn:eur-lex:amend:2026-004',
+        sourceUrl: 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:amend-004',
+        title: 'Art. 50 transparency-obligation editorial fix',
+        summary: 'Editorial: aligns DE / FR translations.',
+        impactedClauses: ['AI Act Art. 50'],
+        status: 'ignored',
+        severity: 'medium',
+        publishedAt: hrAgo(120),
+        ingestedAt: hrAgo(118),
+        triagedAt: hrAgo(72),
+        triagedBy: 'dpo@padosoft.com',
+        triageNotes: 'Editorial only, no host action required.',
+    },
+];
