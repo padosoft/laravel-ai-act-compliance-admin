@@ -88,16 +88,19 @@ describe('Risks screen interactions', () => {
 describe('Alerts screen interactions', () => {
     it('renders dispatch rows from the fixture by default', () => {
         withRouter(<AlertsScreen />);
-        const rows = screen.getAllByTestId(/^alerts-table-row-/);
+        // Anchored selector — un-anchored `^alerts-table-row-` would
+        // also match nested retry/open buttons whose testid shares the
+        // same prefix. Copilot iter-2 on PR #6.
+        const rows = screen.getAllByTestId(/^alerts-table-row-[a-z]+_[0-9]+$/);
         expect(rows.length).toBeGreaterThanOrEqual(4);
     });
 
     it('filters rows by channel when the channel select changes', () => {
         withRouter(<AlertsScreen />);
-        const before = screen.queryAllByTestId(/^alerts-table-row-(?:[a-z]+_[0-9]+)$/).length;
+        const before = screen.queryAllByTestId(/^alerts-table-row-[a-z]+_[0-9]+$/).length;
         const select = screen.getByTestId('alerts-filter-channel') as HTMLSelectElement;
         fireEvent.change(select, { target: { value: 'slack' } });
-        const after = screen.queryAllByTestId(/^alerts-table-row-(?:[a-z]+_[0-9]+)$/);
+        const after = screen.queryAllByTestId(/^alerts-table-row-[a-z]+_[0-9]+$/);
         expect(after.length).toBeLessThanOrEqual(before);
         after.forEach((row) => {
             expect(row.textContent).toContain('slack');
@@ -126,6 +129,50 @@ describe('Alerts screen interactions', () => {
         expect(screen.getByLabelText(/channel/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/severity/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/status/i)).toBeInTheDocument();
+    });
+
+    it('clicking Retry posts to /alerts/dispatches/{id}/retry and surfaces feedback', async () => {
+        // Default `beforeEach` stubs api.get to reject — fine, we want
+        // the fixture rows. Add a successful api.post stub and assert
+        // the URL the button hits. Copilot iter-2 on PR #6 caught that
+        // the prior tests only checked retry buttons render but never
+        // exercised the mutation path.
+        const postSpy = vi.spyOn(api, 'post').mockResolvedValue({ data: {} });
+        withRouter(<AlertsScreen />);
+        const retryButtons = screen.queryAllByTestId(/^alerts-retry-[a-z]+_[0-9]+$/);
+        expect(retryButtons.length).toBeGreaterThanOrEqual(1);
+        const button = retryButtons[0];
+        const id = button.getAttribute('data-testid')!.replace(/^alerts-retry-/, '');
+        fireEvent.click(button);
+        await waitFor(() => expect(postSpy).toHaveBeenCalled());
+        expect(postSpy).toHaveBeenCalledWith(`/alerts/dispatches/${id}/retry`);
+        await waitFor(() => {
+            expect(screen.getByTestId('alerts-retry-feedback')).toHaveTextContent(
+                /Retry requested/i,
+            );
+        });
+    });
+
+    it('shows error banner when the dispatches endpoint returns 500', async () => {
+        // Distinguish network failure / 5xx / 401 from a successful
+        // empty response. Copilot iter-2 on PR #6: a 500 must not
+        // silently fall back to the bundled fixture without warning
+        // the operator that the live audit trail is stale.
+        vi.spyOn(api, 'get').mockRejectedValue({ response: { status: 500 } });
+        withRouter(<AlertsScreen />);
+        await waitFor(() => {
+            expect(screen.getByTestId('alerts-fetch-error')).toBeInTheDocument();
+        });
+        expect(screen.getByTestId('alerts-fetch-error')).toHaveTextContent(/500/);
+    });
+
+    it('replaces fixture with empty state on a 200 with an empty array', async () => {
+        vi.spyOn(api, 'get').mockResolvedValue({ data: [] });
+        withRouter(<AlertsScreen />);
+        await waitFor(() => {
+            expect(screen.getByTestId('alerts-empty')).toBeInTheDocument();
+        });
+        expect(screen.queryAllByTestId(/^alerts-table-row-[a-z]+_[0-9]+$/).length).toBe(0);
     });
 });
 

@@ -39,13 +39,16 @@ test.describe('Admin Alerts — dispatches', () => {
         await expect(page.getByTestId('alerts-screen')).toBeVisible();
         await expect(page.getByTestId('alerts-table')).toBeVisible();
         await expect(page.getByTestId('alerts-filter-bar')).toBeVisible();
-        const rows = page.locator('[data-testid^="alerts-table-row-"]');
+        // Row-only selector: anchor on `tr` to avoid matching nested
+        // retry/open buttons that share the `alerts-table-row-` prefix.
+        // Copilot iter-2 on PR #6.
+        const rows = page.locator('tr[data-testid^="alerts-table-row-"]');
         expect(await rows.count()).toBeGreaterThan(0);
     });
 
     test('clicking a row opens the inline detail card', async ({ page }) => {
         await page.goto('/alerts');
-        const row = page.locator('[data-testid^="alerts-table-row-"]').first();
+        const row = page.locator('tr[data-testid^="alerts-table-row-"]').first();
         await row.click();
         await expect(page.locator('[data-testid^="alerts-detail-"]')).toBeVisible();
     });
@@ -53,7 +56,7 @@ test.describe('Admin Alerts — dispatches', () => {
     test('filtering by severity narrows the table', async ({ page }) => {
         await page.goto('/alerts');
         await page.getByTestId('alerts-filter-severity').selectOption('critical');
-        const rows = page.locator('[data-testid^="alerts-table-row-"]');
+        const rows = page.locator('tr[data-testid^="alerts-table-row-"]');
         const count = await rows.count();
         for (let i = 0; i < count; i++) {
             await expect(rows.nth(i)).toContainText(/critical/i);

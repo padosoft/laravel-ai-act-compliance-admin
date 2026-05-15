@@ -34,7 +34,13 @@ const STATUS_COLOR: Record<AlertStatus, string> = {
     permanent_failure: 'var(--sev-critical)',
 };
 
-async function fetchAlertDispatches(signal: AbortSignal): Promise<AlertDispatchRow[] | null> {
+type FetchOutcome =
+    | { kind: 'ok'; rows: AlertDispatchRow[] }
+    | { kind: 'unauthorized' }
+    | { kind: 'server-error'; status?: number }
+    | { kind: 'network-error' };
+
+async function fetchAlertDispatches(signal: AbortSignal): Promise<FetchOutcome> {
     try {
         const response = await api.get<{ data?: AlertDispatchRow[] } | AlertDispatchRow[]>(
             '/alerts/dispatches',
@@ -42,20 +48,39 @@ async function fetchAlertDispatches(signal: AbortSignal): Promise<AlertDispatchR
         );
         const payload = response.data;
         if (Array.isArray(payload)) {
-            return payload;
+            return { kind: 'ok', rows: payload };
         }
         if (payload && Array.isArray(payload.data)) {
-            return payload.data;
+            return { kind: 'ok', rows: payload.data };
         }
-        return null;
-    } catch (error) {
-        console.warn('[AlertsScreen] /alerts/dispatches unreachable; falling back to bundled fixture.', error);
-        return null;
+        return { kind: 'server-error' };
+    } catch (error: unknown) {
+        // axios populates `error.response.status` on HTTP errors; if
+        // there's no response object the request never reached the API
+        // (offline, DNS failure, CORS) and we treat it as a network
+        // error. Authorization failures and 5xx must NOT silently fall
+        // back to the bundled fixture — that would mask fake "delivered"
+        // audit rows over a real outage. Copilot iter-2 on PR #6.
+        const err = error as { response?: { status?: number } } | undefined;
+        const httpStatus = err?.response?.status;
+        if (httpStatus === 401 || httpStatus === 403) {
+            return { kind: 'unauthorized' };
+        }
+        if (typeof httpStatus === 'number') {
+            return { kind: 'server-error', status: httpStatus };
+        }
+        return { kind: 'network-error' };
     }
 }
 
+type FetchState =
+    | { kind: 'fixture' }
+    | { kind: 'live' }
+    | { kind: 'error'; message: string };
+
 export function AlertsScreen() {
     const [dispatches, setDispatches] = useState<AlertDispatchRow[]>(ALERT_DISPATCHES);
+    const [fetchState, setFetchState] = useState<FetchState>({ kind: 'fixture' });
     const [channel, setChannel] = useState<ChannelFilter>('all');
     const [severity, setSeverity] = useState<SeverityFilter>('all');
     const [status, setStatus] = useState<StatusFilter>('all');
@@ -65,10 +90,36 @@ export function AlertsScreen() {
 
     useEffect(() => {
         const controller = new AbortController();
-        void fetchAlertDispatches(controller.signal).then((result) => {
-            if (result && result.length > 0) {
-                setDispatches(result);
+        void fetchAlertDispatches(controller.signal).then((outcome) => {
+            // 200 with an empty list IS meaningful — replace the
+            // bundled fixture with the empty state so the audit log
+            // reflects reality. Errors keep the fixture but surface
+            // a banner so the operator knows the live data is stale.
+            // Copilot iter-2 on PR #6.
+            if (outcome.kind === 'ok') {
+                setDispatches(outcome.rows);
+                setFetchState({ kind: 'live' });
+                return;
             }
+            if (outcome.kind === 'unauthorized') {
+                setFetchState({
+                    kind: 'error',
+                    message: 'Cannot load alert dispatches — not authorized.',
+                });
+                return;
+            }
+            if (outcome.kind === 'server-error') {
+                const suffix = outcome.status ? ` (HTTP ${outcome.status})` : '';
+                setFetchState({
+                    kind: 'error',
+                    message: `Cannot load alert dispatches — server error${suffix}.`,
+                });
+                return;
+            }
+            setFetchState({
+                kind: 'error',
+                message: 'Cannot load alert dispatches — network unreachable.',
+            });
         });
         return () => controller.abort();
     }, []);
@@ -125,6 +176,22 @@ export function AlertsScreen() {
                     </span>
                 </div>
             </div>
+
+            {fetchState.kind === 'error' && (
+                <div
+                    className="card mt-16"
+                    role="alert"
+                    data-testid="alerts-fetch-error"
+                    style={{
+                        background: 'var(--bg-2)',
+                        border: '1px solid var(--sev-critical)',
+                        color: 'var(--sev-critical)',
+                        padding: 12,
+                    }}
+                >
+                    {fetchState.message}
+                </div>
+            )}
 
             <div className="filter-bar" data-testid="alerts-filter-bar">
                 <div className="filter-group">
@@ -190,13 +257,33 @@ export function AlertsScreen() {
                             <tr
                                 key={row.id}
                                 onClick={() => setSelectedId(row.id)}
+<<<<<<< HEAD
                                 onKeyDown={(event) => {
                                     if (event.key === 'Enter' || event.key === ' ') {
                                         event.preventDefault();
+=======
+                                onKeyDown={(e) => {
+                                    // Ignore Enter/Space that bubbled from
+                                    // a nested action button — the action
+                                    // already handled its own activation,
+                                    // and double-firing would open the
+                                    // drawer at the same time as the
+                                    // retry/open click. Copilot iter-2 PR #6.
+                                    if (e.target !== e.currentTarget) {
+                                        return;
+                                    }
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+>>>>>>> ce79bd1 (fix(v1.3/iter-2): close Copilot review findings on PR #6)
                                         setSelectedId(row.id);
                                     }
                                 }}
                                 tabIndex={0}
+<<<<<<< HEAD
+=======
+                                role="button"
+                                aria-label={`Open dispatch ${row.id}`}
+>>>>>>> ce79bd1 (fix(v1.3/iter-2): close Copilot review findings on PR #6)
                                 data-testid={`alerts-table-row-${row.id}`}
                                 style={{ cursor: 'pointer' }}
                             >
@@ -239,6 +326,11 @@ export function AlertsScreen() {
                                             e.stopPropagation();
                                             setSelectedId(row.id);
                                         }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.stopPropagation();
+                                            }
+                                        }}
                                     >
                                         <I.ChevronRight size={14} />
                                     </button>
@@ -251,6 +343,11 @@ export function AlertsScreen() {
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 void retryDispatch(row.id);
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                    e.stopPropagation();
+                                                }
                                             }}
                                         >
                                             {retryingById[row.id] ? 'Retrying…' : 'Retry'}
