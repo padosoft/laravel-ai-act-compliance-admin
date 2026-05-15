@@ -10,6 +10,7 @@ import { FriaScreen } from './features/fria/FriaScreen';
 import { IncidentsScreen } from './features/incidents/IncidentsScreen';
 import { BiasScreen } from './features/bias/BiasScreen';
 import { DpoScreen } from './features/dpo/DpoScreen';
+import { RegulatoryScreen } from './features/regulatory/RegulatoryScreen';
 import { SettingsScreen } from './features/settings/SettingsScreen';
 
 import './styles-base.css';
@@ -38,6 +39,7 @@ export function App() {
                     <Route path="incidents" element={<IncidentsScreen />} />
                     <Route path="bias" element={<BiasScreen />} />
                     <Route path="dpo" element={<DpoScreen />} />
+                    <Route path="regulatory" element={<RegulatoryScreen />} />
                     <Route path="settings" element={<SettingsScreen />} />
                 </Route>
             </Routes>

@@ -199,3 +199,93 @@ test.describe('Admin DPO — data flow + retention + deletion', () => {
         await expect(page.getByTestId('dpo-generate-attestation')).toBeVisible();
     });
 });
+
+test.describe('Admin Regulatory feed — amendments', () => {
+    // Stub /regulatory-amendments and /regulatory-amendments/poll so
+    // the standalone vite preview run renders live-style data
+    // without a Laravel backend. R13-OK because the API is external
+    // to this admin-SPA repo.
+    const FIXTURE = [
+        {
+            id: 101,
+            tenantId: null,
+            sourceDriver: 'eu-ai-act-rss',
+            externalId: 'e2e-art-5',
+            sourceUrl: 'https://example.test/art5',
+            title: 'Amendment to Art. 5 — e2e fixture',
+            summary: null,
+            impactedClauses: ['AI Act Art. 5'],
+            status: 'pending',
+            severity: 'critical',
+            publishedAt: Date.now() - 3_600_000,
+            ingestedAt: Date.now() - 3_500_000,
+            triagedAt: null,
+            triagedBy: null,
+            triageNotes: null,
+        },
+        {
+            id: 102,
+            tenantId: null,
+            sourceDriver: 'eu-ai-act-rss',
+            externalId: 'e2e-art-27',
+            sourceUrl: 'https://example.test/art27',
+            title: 'FRIA template — e2e fixture',
+            summary: null,
+            impactedClauses: ['AI Act Art. 27'],
+            status: 'triaged',
+            severity: 'high',
+            publishedAt: Date.now() - 7_200_000,
+            ingestedAt: Date.now() - 7_100_000,
+            triagedAt: Date.now() - 3_000_000,
+            triagedBy: 'dpo@example.test',
+            triageNotes: null,
+        },
+    ];
+
+    async function stubRegulatory(page: import('@playwright/test').Page) {
+        await page.route('**/regulatory-amendments', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify(FIXTURE),
+            });
+        });
+        await page.route('**/regulatory-amendments/poll', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ data: { ingested: 1, skipped: 0, failures: {} } }),
+            });
+        });
+    }
+
+    test('renders the amendments table and filter bar', async ({ page }) => {
+        await stubRegulatory(page);
+        await page.goto('/regulatory');
+        await expect(page.getByTestId('regulatory-screen')).toBeVisible();
+        await expect(page.getByTestId('regulatory-table')).toBeVisible();
+        await expect(page.getByTestId('regulatory-filter-bar')).toBeVisible();
+        const rows = page.locator('tr[data-testid^="regulatory-table-row-"]');
+        expect(await rows.count()).toBeGreaterThan(0);
+    });
+
+    test('clicking Poll now surfaces the ingest summary', async ({ page }) => {
+        await stubRegulatory(page);
+        await page.goto('/regulatory');
+        await page.getByTestId('regulatory-poll-now').click();
+        await expect(page.getByTestId('regulatory-poll-feedback')).toContainText(
+            /ingested 1/i,
+        );
+    });
+
+    test('filtering by status narrows the table', async ({ page }) => {
+        await stubRegulatory(page);
+        await page.goto('/regulatory');
+        await page.getByTestId('regulatory-filter-status').selectOption('triaged');
+        const rows = page.locator('tr[data-testid^="regulatory-table-row-"]');
+        const count = await rows.count();
+        for (let i = 0; i < count; i++) {
+            await expect(rows.nth(i)).toContainText(/Triaged/i);
+        }
+    });
+});

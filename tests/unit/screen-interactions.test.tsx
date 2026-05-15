@@ -17,6 +17,7 @@ afterEach(() => {
 });
 
 import { AlertsScreen } from '../../src/features/alerts/AlertsScreen';
+import { RegulatoryScreen } from '../../src/features/regulatory/RegulatoryScreen';
 import { DsarScreen } from '../../src/features/dsar/DsarScreen';
 import { ConsentScreen } from '../../src/features/consent/ConsentScreen';
 import { RisksScreen } from '../../src/features/risks/RisksScreen';
@@ -379,5 +380,86 @@ describe('Settings screen interactions', () => {
         fireEvent.click(screen.getByTestId('settings-show-secrets'));
         // Post-state: no more dots
         expect(screen.queryAllByText(/••••••••/).length).toBe(0);
+    });
+});
+
+describe('Regulatory screen interactions', () => {
+    it('renders amendment rows from the fixture by default', () => {
+        withRouter(<RegulatoryScreen />);
+        const rows = screen.getAllByTestId(/^regulatory-table-row-\d+$/);
+        expect(rows.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('filters rows by severity when the severity select changes', () => {
+        withRouter(<RegulatoryScreen />);
+        const before = screen.queryAllByTestId(/^regulatory-table-row-\d+$/).length;
+        fireEvent.change(screen.getByTestId('regulatory-filter-severity'), {
+            target: { value: 'critical' },
+        });
+        const after = screen.queryAllByTestId(/^regulatory-table-row-\d+$/);
+        expect(after.length).toBeLessThanOrEqual(before);
+    });
+
+    it('clicking a row opens the inline detail card with triage buttons', () => {
+        withRouter(<RegulatoryScreen />);
+        const firstRow = screen.getAllByTestId(/^regulatory-table-row-\d+$/)[0];
+        fireEvent.click(firstRow);
+        const detail = screen.getAllByTestId(/^regulatory-detail-\d+$/)[0];
+        expect(detail).toBeInTheDocument();
+    });
+
+    it('Poll now button POSTs to /regulatory-amendments/poll and surfaces feedback', async () => {
+        const postSpy = vi.spyOn(api, 'post').mockResolvedValueOnce({
+            data: { data: { ingested: 3, skipped: 1, failures: {} } },
+        });
+        withRouter(<RegulatoryScreen />);
+        fireEvent.click(screen.getByTestId('regulatory-poll-now'));
+        await waitFor(() => expect(postSpy).toHaveBeenCalled());
+        expect(postSpy).toHaveBeenCalledWith('/regulatory-amendments/poll');
+        await waitFor(() => {
+            expect(screen.getByTestId('regulatory-poll-feedback')).toHaveTextContent(
+                /ingested 3.*skipped 1/i,
+            );
+        });
+    });
+
+    it('Poll now 409 maps to a "feature disabled" message', async () => {
+        vi.spyOn(api, 'post').mockRejectedValueOnce({
+            response: { status: 409, data: { error: 'regulatory_feed.enabled=false' } },
+        });
+        withRouter(<RegulatoryScreen />);
+        fireEvent.click(screen.getByTestId('regulatory-poll-now'));
+        await waitFor(() => {
+            expect(screen.getByTestId('regulatory-poll-feedback')).toHaveTextContent(
+                /AI_ACT_REGULATORY_FEED_ENABLED/,
+            );
+        });
+    });
+
+    it('Mark triaged updates the row status via PATCH', async () => {
+        const patchSpy = vi.spyOn(api, 'patch').mockResolvedValueOnce({ data: {} });
+        withRouter(<RegulatoryScreen />);
+        // Open the first row's drawer (id=1 fixture is pending)
+        fireEvent.click(screen.getByTestId('regulatory-table-row-1'));
+        const triage = screen.getByTestId('regulatory-triage-1');
+        fireEvent.click(triage);
+        await waitFor(() => expect(patchSpy).toHaveBeenCalled());
+        expect(patchSpy).toHaveBeenCalledWith('/regulatory-amendments/1', {
+            status: 'triaged',
+        });
+    });
+
+    it('shows error banner when the list endpoint returns 500', async () => {
+        vi.spyOn(api, 'get').mockRejectedValueOnce({ response: { status: 500 } });
+        withRouter(<RegulatoryScreen />);
+        await waitFor(() => {
+            expect(screen.getByTestId('regulatory-fetch-error')).toHaveTextContent(/500/);
+        });
+    });
+
+    it('all 2 filter selects expose accessible labels (R15)', () => {
+        withRouter(<RegulatoryScreen />);
+        expect(screen.getByLabelText(/status/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/severity/i)).toBeInTheDocument();
     });
 });
