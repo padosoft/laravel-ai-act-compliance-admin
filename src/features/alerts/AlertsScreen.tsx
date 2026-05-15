@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
+import { api } from '../../api/client';
 import { I } from '../../components/Icons';
 import { fmtRelativeFrom } from '../../lib/helpers';
 import {
@@ -33,28 +34,85 @@ const STATUS_COLOR: Record<AlertStatus, string> = {
     permanent_failure: 'var(--sev-critical)',
 };
 
+async function fetchAlertDispatches(signal: AbortSignal): Promise<AlertDispatchRow[] | null> {
+    try {
+        const response = await api.get<{ data?: AlertDispatchRow[] } | AlertDispatchRow[]>(
+            '/alerts/dispatches',
+            { signal },
+        );
+        const payload = response.data;
+        if (Array.isArray(payload)) {
+            return payload;
+        }
+        if (payload && Array.isArray(payload.data)) {
+            return payload.data;
+        }
+        return null;
+    } catch {
+        return null;
+    }
+}
+
 export function AlertsScreen() {
+    const [dispatches, setDispatches] = useState<AlertDispatchRow[]>(ALERT_DISPATCHES);
     const [channel, setChannel] = useState<ChannelFilter>('all');
     const [severity, setSeverity] = useState<SeverityFilter>('all');
     const [status, setStatus] = useState<StatusFilter>('all');
     const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [retryingById, setRetryingById] = useState<Record<string, boolean>>({});
+    const [retryFeedback, setRetryFeedback] = useState<string | null>(null);
+
+    useEffect(() => {
+        const controller = new AbortController();
+        void fetchAlertDispatches(controller.signal).then((result) => {
+            if (result && result.length > 0) {
+                setDispatches(result);
+            }
+        });
+        return () => controller.abort();
+    }, []);
+
+    const retryDispatch = async (id: string) => {
+        setRetryFeedback(null);
+        setRetryingById((current) => ({ ...current, [id]: true }));
+        try {
+            await api.post(`/alerts/dispatches/${id}/retry`);
+            setDispatches((current) =>
+                current.map((row) =>
+                    row.id === id
+                        ? {
+                            ...row,
+                            status: 'ok',
+                            httpStatus: row.httpStatus ?? 202,
+                            errorMessage: null,
+                        }
+                        : row,
+                ),
+            );
+            setRetryFeedback(`Retry queued for ${id}.`);
+        } catch {
+            setRetryFeedback(`Retry failed for ${id}.`);
+        } finally {
+            setRetryingById((current) => ({ ...current, [id]: false }));
+        }
+    };
 
     const filtered = useMemo(() => {
-        return ALERT_DISPATCHES.filter((row) => {
+        return dispatches.filter((row) => {
             if (channel !== 'all' && row.channel !== channel) return false;
             if (severity !== 'all' && row.severity !== severity) return false;
             if (status !== 'all' && row.status !== status) return false;
             return true;
         });
-    }, [channel, severity, status]);
+    }, [channel, dispatches, severity, status]);
 
     const selected = useMemo(
-        () => (selectedId ? ALERT_DISPATCHES.find((r) => r.id === selectedId) ?? null : null),
-        [selectedId],
+        () => (selectedId ? dispatches.find((r) => r.id === selectedId) ?? null : null),
+        [dispatches, selectedId],
     );
 
-    const transientFailures = ALERT_DISPATCHES.filter((r) => r.status === 'transient_failure').length;
-    const permanentFailures = ALERT_DISPATCHES.filter((r) => r.status === 'permanent_failure').length;
+    const transientFailures = dispatches.filter((r) => r.status === 'transient_failure').length;
+    const permanentFailures = dispatches.filter((r) => r.status === 'permanent_failure').length;
 
     return (
         <div className="page" data-testid="alerts-screen" data-state="ready">
@@ -62,7 +120,7 @@ export function AlertsScreen() {
                 <div>
                     <h1 className="page-title">Alerts</h1>
                     <p className="page-sub">
-                        Real-time alert dispatch trail · {ALERT_DISPATCHES.length} entries ·{' '}
+                        Real-time alert dispatch trail · {dispatches.length} entries ·{' '}
                         {transientFailures} transient / {permanentFailures} permanent failures
                     </p>
                 </div>
@@ -125,7 +183,7 @@ export function AlertsScreen() {
             </div>
 
             <div className="card" data-testid="alerts-table">
-                <table className="table">
+                <table className="data-table">
                     <thead>
                         <tr>
                             <th>When</th>
@@ -142,7 +200,7 @@ export function AlertsScreen() {
                             <tr
                                 key={row.id}
                                 onClick={() => setSelectedId(row.id)}
-                                data-testid={`alerts-row-${row.id}`}
+                                data-testid={`alerts-table-row-${row.id}`}
                                 style={{ cursor: 'pointer' }}
                             >
                                 <td><small>{fmtRelativeFrom(row.sentAt)}</small></td>
@@ -175,19 +233,30 @@ export function AlertsScreen() {
                                 </td>
                                 <td><small>{row.tenantId ?? '—'}</small></td>
                                 <td style={{ textAlign: 'right' }}>
-                                    {row.status !== 'ok' && (
+                                    <button
+                                        type="button"
+                                        className="iconbtn"
+                                        aria-label={`Open ${row.id}`}
+                                        data-testid={`alerts-open-${row.id}`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedId(row.id);
+                                        }}
+                                    >
+                                        <I.ChevronRight size={14} />
+                                    </button>
+                                    {row.status === 'transient_failure' && (
                                         <button
                                             type="button"
                                             className="btn sm"
-                                            data-testid={`alerts-row-${row.id}-retry`}
+                                            data-testid={`alerts-retry-${row.id}`}
+                                            disabled={Boolean(retryingById[row.id])}
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                // Retry handled BE-side; this is a no-op
-                                                // placeholder that surfaces the button in
-                                                // tests.
+                                                void retryDispatch(row.id);
                                             }}
                                         >
-                                            Retry
+                                            {retryingById[row.id] ? 'Retrying…' : 'Retry'}
                                         </button>
                                     )}
                                 </td>
@@ -204,6 +273,11 @@ export function AlertsScreen() {
                         )}
                     </tbody>
                 </table>
+                {retryFeedback && (
+                    <div className="mt-16" role="status" data-testid="alerts-retry-feedback">
+                        {retryFeedback}
+                    </div>
+                )}
             </div>
 
             {selected && (

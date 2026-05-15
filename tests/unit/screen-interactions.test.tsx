@@ -88,16 +88,16 @@ describe('Risks screen interactions', () => {
 describe('Alerts screen interactions', () => {
     it('renders dispatch rows from the fixture by default', () => {
         withRouter(<AlertsScreen />);
-        const rows = screen.getAllByTestId(/^alerts-row-/);
+        const rows = screen.getAllByTestId(/^alerts-table-row-/);
         expect(rows.length).toBeGreaterThanOrEqual(4);
     });
 
     it('filters rows by channel when the channel select changes', () => {
         withRouter(<AlertsScreen />);
-        const before = screen.queryAllByTestId(/^alerts-row-(?:[a-z]+_[0-9]+)$/).length;
+        const before = screen.queryAllByTestId(/^alerts-table-row-(?:[a-z]+_[0-9]+)$/).length;
         const select = screen.getByTestId('alerts-filter-channel') as HTMLSelectElement;
         fireEvent.change(select, { target: { value: 'slack' } });
-        const after = screen.queryAllByTestId(/^alerts-row-(?:[a-z]+_[0-9]+)$/);
+        const after = screen.queryAllByTestId(/^alerts-table-row-(?:[a-z]+_[0-9]+)$/);
         expect(after.length).toBeLessThanOrEqual(before);
         after.forEach((row) => {
             expect(row.textContent).toContain('slack');
@@ -109,13 +109,13 @@ describe('Alerts screen interactions', () => {
         fireEvent.change(screen.getByTestId('alerts-filter-status'), {
             target: { value: 'transient_failure' },
         });
-        const retryButtons = screen.queryAllByTestId(/^alerts-row-[a-z]+_[0-9]+-retry$/);
+        const retryButtons = screen.queryAllByTestId(/^alerts-retry-[a-z]+_[0-9]+$/);
         expect(retryButtons.length).toBeGreaterThanOrEqual(1);
     });
 
     it('clicking a row opens the inline detail card', () => {
         withRouter(<AlertsScreen />);
-        const firstRow = screen.getAllByTestId(/^alerts-row-[a-z]+_[0-9]+$/)[0];
+        const firstRow = screen.getAllByTestId(/^alerts-table-row-[a-z]+_[0-9]+$/)[0];
         fireEvent.click(firstRow);
         const detail = screen.getAllByTestId(/^alerts-detail-/)[0];
         expect(detail).toBeInTheDocument();
