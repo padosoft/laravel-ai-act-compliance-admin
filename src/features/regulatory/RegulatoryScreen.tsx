@@ -99,10 +99,19 @@ export function RegulatoryScreen() {
         loading: boolean;
         message: string | null;
     }>({ loading: false, message: null });
+    const [triageError, setTriageError] = useState<string | null>(null);
 
     useEffect(() => {
         const controller = new AbortController();
         void fetchAmendments(controller.signal).then((outcome) => {
+            // If the effect was torn down (navigation / fast remount)
+            // before the fetch resolved, skip every setState — the
+            // component is unmounted and applying state would flash
+            // the network-error banner on the NEXT mount. Copilot
+            // iter-1 review on PR #7.
+            if (controller.signal.aborted) {
+                return;
+            }
             if (outcome.kind === 'ok') {
                 setAmendments(outcome.rows);
                 setFetchState({ kind: 'live' });
@@ -191,9 +200,22 @@ export function RegulatoryScreen() {
     const updateStatus = async (id: number, nextStatus: AmendmentStatus) => {
         try {
             await api.patch(`/regulatory-amendments/${id}`, { status: nextStatus });
-        } catch {
-            // Surface a non-blocking toast in production; we keep the
-            // optimistic UI update.
+            // Optimistic update accepted by the server — clear any
+            // prior triage error.
+            setTriageError(null);
+        } catch (error: unknown) {
+            // The repo has no toast system; surface the error inline
+            // via `triageError` state so the operator notices the
+            // PATCH did not stick. Copilot iter-1 review on PR #7.
+            const err = error as { response?: { status?: number } } | undefined;
+            const statusCode = err?.response?.status;
+            setTriageError(
+                statusCode
+                    ? `Failed to update amendment ${id} (HTTP ${statusCode}).`
+                    : `Failed to update amendment ${id} — network unreachable.`,
+            );
+
+            return;
         }
         setAmendments((current) =>
             current.map((row) =>
@@ -255,6 +277,22 @@ export function RegulatoryScreen() {
                     style={{ padding: 12 }}
                 >
                     {pollState.message}
+                </div>
+            )}
+
+            {triageError && (
+                <div
+                    className="card mt-16"
+                    role="alert"
+                    data-testid="regulatory-triage-error"
+                    style={{
+                        background: 'var(--bg-2)',
+                        border: '1px solid var(--sev-critical)',
+                        color: 'var(--sev-critical)',
+                        padding: 12,
+                    }}
+                >
+                    {triageError}
                 </div>
             )}
 
@@ -320,7 +358,6 @@ export function RegulatoryScreen() {
                                     }
                                 }}
                                 tabIndex={0}
-                                role="button"
                                 aria-label={`Open amendment ${row.title}`}
                                 data-testid={`regulatory-table-row-${row.id}`}
                                 style={{ cursor: 'pointer' }}
