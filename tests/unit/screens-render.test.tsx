@@ -2,12 +2,13 @@ import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
-// v1.2 — BiasScreen fires a best-effort fetch on mount; stub to 404 so
-// the rendered tree falls back to the fixture. Restore in afterEach.
+import { api } from '../../src/api/client';
+
+// v1.2 — BiasScreen fires a best-effort fetch via the shared axios
+// client on mount; stub it to reject so the rendered tree falls back
+// to the fixture. Restore in afterEach.
 beforeEach(() => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(null, { status: 404 }) as unknown as Response,
-    );
+    vi.spyOn(api, 'get').mockRejectedValue(new Error('test: endpoint unreachable'));
 });
 afterEach(() => {
     vi.restoreAllMocks();

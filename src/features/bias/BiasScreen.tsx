@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import { api } from '../../api/client';
 import { I } from '../../components/Icons';
 import { ArticleRef } from '../../components/Primitives';
 import {
@@ -11,8 +12,9 @@ import {
 } from '../../lib/mock-data';
 
 /**
- * Fetch the live bias-metrics list from the BE. Production hosts
- * expose `GET /api/admin/ai-act-compliance/bias/metrics` (planned in
+ * Fetch the live bias-metrics list from the BE via the shared admin
+ * API client. Production hosts expose
+ * `GET /api/admin/ai-act-compliance/bias/metrics` (planned in
  * laravel-ai-act-compliance v1.2.1 — the BE endpoint follows the
  * service-layer v1.2 in PR #2). Falls back to the bundled fixture
  * when the endpoint is unreachable (dev, network failure, or v1.2
@@ -21,21 +23,19 @@ import {
  *
  * R18 (derive-from-DB-not-literal) — the dropdown contents are
  * derived from the live registry whenever it answers, fixture is
- * the dev/seed fallback. R14 (surface-failures-loudly) — we
- * deliberately log fetch failures via console.warn so the operator
- * sees the fallback path was taken; we don't surface an error in
- * the page because the fixture is a valid degraded mode.
+ * the dev/seed fallback. R14 (surface-failures-loudly) — fetch
+ * failures are logged via `console.warn` (the operator sees the
+ * fallback path was taken in the browser console); we deliberately
+ * do NOT surface a page-level error because the fixture is a valid
+ * degraded mode.
  */
 async function fetchBiasMetrics(signal: AbortSignal): Promise<BiasMetricMeta[] | null> {
     try {
-        const response = await fetch('/api/admin/ai-act-compliance/bias/metrics', {
-            credentials: 'same-origin',
-            signal,
-        });
-        if (!response.ok) {
-            return null;
-        }
-        const payload = (await response.json()) as { data?: BiasMetricMeta[] } | BiasMetricMeta[];
+        const response = await api.get<{ data?: BiasMetricMeta[] } | BiasMetricMeta[]>(
+            '/bias/metrics',
+            { signal },
+        );
+        const payload = response.data;
         if (Array.isArray(payload)) {
             return payload;
         }
@@ -43,7 +43,13 @@ async function fetchBiasMetrics(signal: AbortSignal): Promise<BiasMetricMeta[] |
             return payload.data;
         }
         return null;
-    } catch (_) {
+    } catch (error) {
+        // Per the docblock: surface the fallback decision so an
+        // operator inspecting the browser console can tell the
+        // fixture is in play.
+        if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+            console.warn('[BiasScreen] /bias/metrics unreachable; falling back to bundled fixture.', error);
+        }
         return null;
     }
 }
@@ -75,13 +81,39 @@ export function BiasScreen() {
     // bug where only the label/article-evidence updated. Memoised so
     // the transform doesn't re-run on every render.
     const baseData = COHORT_DATA[dimension] ?? COHORT_DATA.language;
-    const data = useMemo(() => biasMetricDataFor(metricId, baseData), [metricId, baseData]);
+    const transformedData = useMemo(
+        () => biasMetricDataFor(metricId, baseData),
+        [metricId, baseData],
+    );
+    // Host-app custom metrics surfaced by the live registry may not
+    // have a SPA-side transform — the fixture-only screen renders an
+    // empty state in that case instead of misattributing demographic-
+    // parity numbers to the custom metric (Copilot review PR #5).
+    const data = transformedData ?? baseData;
+    const isUnknownMetric = transformedData === null;
     const dimensionMeta = COHORT_DIMENSIONS.find((d) => d.id === dimension);
 
-    const worstRow = useMemo(
-        () => data.rows.reduce((acc, row) => (row.accuracy < acc.accuracy ? row : acc), data.rows[0]),
-        [data],
-    );
+    // \"Worst cohort\" semantics depend on the metric:
+    //  - For accuracy / Demographic Parity / Equalized Odds the LOWEST
+    //    score is worst (lower accuracy / lower positive-rate / lower
+    //    compound rate means the cohort under-performs the population).
+    //  - For Calibration the HIGHEST score is worst (calibration is a
+    //    GAP metric — bigger gap = more miscalibrated).
+    // Without this branch a Calibration view would highlight the
+    // BEST-calibrated cohort as the worst, which Copilot review on
+    // PR #5 (commit 5169694) caught.
+    const worstRow = useMemo(() => {
+        const isGapMetric = metricId === 'calibration';
+        return data.rows.reduce(
+            (acc, row) => {
+                if (isGapMetric) {
+                    return row.accuracy > acc.accuracy ? row : acc;
+                }
+                return row.accuracy < acc.accuracy ? row : acc;
+            },
+            data.rows[0],
+        );
+    }, [data, metricId]);
 
     return (
         <div className="page" data-testid="bias-screen" data-state="ready">
@@ -169,12 +201,21 @@ export function BiasScreen() {
                 <div className="card">
                     <div className="card-head">
                         <div>
-                            <h3 className="card-title">Accuracy parity per segment</h3>
+                            <h3 className="card-title">{metricMeta.label} per segment</h3>
                             <p className="card-sub">95% CI band, sample size weighted</p>
                         </div>
                     </div>
                     <div className="card-body">
-                        <CohortParityChart rows={data.rows} overall={data.overall} />
+                        {isUnknownMetric ? (
+                            <div className="empty" data-testid="bias-unknown-metric-empty">
+                                No SPA-side fixture data for the host-app custom metric
+                                <b> {metricMeta.label}</b>. Hosts that ship the BE
+                                metadata endpoint should also supply a matching dataset
+                                payload via <code>/bias/snapshots</code>.
+                            </div>
+                        ) : (
+                            <CohortParityChart rows={data.rows} overall={data.overall} />
+                        )}
                     </div>
                 </div>
 
