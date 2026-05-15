@@ -77,19 +77,7 @@ export function AlertsScreen() {
         setRetryingById((current) => ({ ...current, [id]: true }));
         try {
             await api.post(`/alerts/dispatches/${id}/retry`);
-            setDispatches((current) =>
-                current.map((row) =>
-                    row.id === id
-                        ? {
-                            ...row,
-                            status: 'ok',
-                            httpStatus: row.httpStatus ?? 202,
-                            errorMessage: null,
-                        }
-                        : row,
-                ),
-            );
-            setRetryFeedback(`Retry queued for ${id}.`);
+            setRetryFeedback(`Retry requested for ${id}.`);
         } catch {
             setRetryFeedback(`Retry failed for ${id}.`);
         } finally {
