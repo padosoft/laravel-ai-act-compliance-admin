@@ -48,7 +48,10 @@ async function fetchAlertDispatches(signal: AbortSignal): Promise<AlertDispatchR
             return payload.data;
         }
         return null;
-    } catch {
+    } catch (error) {
+        if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+            console.warn('[AlertsScreen] /alerts/dispatches unreachable; falling back to bundled fixture.', error);
+        }
         return null;
     }
 }
@@ -77,9 +80,10 @@ export function AlertsScreen() {
         setRetryingById((current) => ({ ...current, [id]: true }));
         try {
             await api.post(`/alerts/dispatches/${id}/retry`);
-            setRetryFeedback(`Retry requested for ${id}.`);
-        } catch {
-            setRetryFeedback(`Retry failed for ${id}.`);
+            setRetryFeedback('Retry requested.');
+        } catch (error) {
+            const reason = error instanceof Error ? error.message : 'Please try again.';
+            setRetryFeedback(`Retry failed: ${reason}`);
         } finally {
             setRetryingById((current) => ({ ...current, [id]: false }));
         }
