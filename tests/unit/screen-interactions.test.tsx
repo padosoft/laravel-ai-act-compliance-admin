@@ -131,48 +131,67 @@ describe('Alerts screen interactions', () => {
         expect(screen.getByLabelText(/status/i)).toBeInTheDocument();
     });
 
-    it('clicking Retry posts to /alerts/dispatches/{id}/retry and surfaces feedback', async () => {
-        // Default `beforeEach` stubs api.get to reject — fine, we want
-        // the fixture rows. Add a successful api.post stub and assert
-        // the URL the button hits. Copilot iter-2 on PR #6 caught that
-        // the prior tests only checked retry buttons render but never
-        // exercised the mutation path.
-        const postSpy = vi.spyOn(api, 'post').mockResolvedValue({ data: {} });
-        withRouter(<AlertsScreen />);
-        const retryButtons = screen.queryAllByTestId(/^alerts-retry-[a-z]+_[0-9]+$/);
-        expect(retryButtons.length).toBeGreaterThanOrEqual(1);
-        const button = retryButtons[0];
-        const id = button.getAttribute('data-testid')!.replace(/^alerts-retry-/, '');
-        fireEvent.click(button);
-        await waitFor(() => expect(postSpy).toHaveBeenCalled());
-        expect(postSpy).toHaveBeenCalledWith(`/alerts/dispatches/${id}/retry`);
-        await waitFor(() => {
-            expect(screen.getByTestId('alerts-retry-feedback')).toHaveTextContent(
-                /Retry requested/i,
-            );
-        });
-    });
-
-    it('shows error banner when the dispatches endpoint returns 500', async () => {
-        // Distinguish network failure / 5xx / 401 from a successful
-        // empty response. Copilot iter-2 on PR #6: a 500 must not
-        // silently fall back to the bundled fixture without warning
-        // the operator that the live audit trail is stale.
-        vi.spyOn(api, 'get').mockRejectedValue({ response: { status: 500 } });
-        withRouter(<AlertsScreen />);
-        await waitFor(() => {
-            expect(screen.getByTestId('alerts-fetch-error')).toBeInTheDocument();
-        });
-        expect(screen.getByTestId('alerts-fetch-error')).toHaveTextContent(/500/);
-    });
-
-    it('replaces fixture with empty state on a 200 with an empty array', async () => {
-        vi.spyOn(api, 'get').mockResolvedValue({ data: [] });
+    it('uses an empty successful API response as the source of truth', async () => {
+        vi.spyOn(api, 'get').mockResolvedValueOnce({ data: [] });
         withRouter(<AlertsScreen />);
         await waitFor(() => {
             expect(screen.getByTestId('alerts-empty')).toBeInTheDocument();
         });
-        expect(screen.queryAllByTestId(/^alerts-table-row-[a-z]+_[0-9]+$/).length).toBe(0);
+        expect(screen.queryAllByTestId(/^alerts-table-row-/)).toHaveLength(0);
+        expect(screen.queryByTestId('alerts-fetch-error')).not.toBeInTheDocument();
+    });
+
+    it('shows an explicit load error on server failures instead of fixture fallback', async () => {
+        vi.spyOn(api, 'get').mockRejectedValueOnce({
+            isAxiosError: true,
+            response: { status: 500 },
+        });
+        withRouter(<AlertsScreen />);
+        await waitFor(() => {
+            expect(screen.getByTestId('alerts-fetch-error')).toHaveTextContent('HTTP 500');
+        });
+        expect(screen.queryAllByTestId(/^alerts-table-row-/)).toHaveLength(0);
+    });
+
+    it('retry button calls the API and shows success feedback', async () => {
+        const postSpy = vi.spyOn(api, 'post').mockResolvedValueOnce({ data: {} });
+        withRouter(<AlertsScreen />);
+        const retryButton = screen.getByTestId('alerts-retry-ad_003');
+        fireEvent.click(retryButton);
+        expect(postSpy).toHaveBeenCalledWith('/alerts/dispatches/ad_003/retry');
+        await waitFor(() => {
+            expect(screen.getByTestId('alerts-retry-feedback')).toHaveTextContent('Retry requested.');
+        });
+    });
+
+    it('retry button shows loading state and failure feedback', async () => {
+        const deferred: { reject?: (error: Error) => void } = {};
+        vi.spyOn(api, 'post').mockImplementationOnce(
+            () =>
+                new Promise((_, reject) => {
+                    deferred.reject = reject as (error: Error) => void;
+                }),
+        );
+        withRouter(<AlertsScreen />);
+        const retryButton = screen.getByTestId('alerts-retry-ad_003');
+        fireEvent.click(retryButton);
+        expect(retryButton).toBeDisabled();
+        expect(retryButton).toHaveTextContent('Retrying…');
+        expect(deferred.reject).toBeDefined();
+        deferred.reject?.(new Error('boom'));
+        await waitFor(() => {
+            expect(screen.getByTestId('alerts-retry-feedback')).toHaveTextContent('Retry failed: boom');
+        });
+    });
+
+    it('pressing Enter on Retry does not also open the row details', async () => {
+        withRouter(<AlertsScreen />);
+        expect(screen.queryByTestId('alerts-detail-ad_003')).not.toBeInTheDocument();
+        const retryButton = screen.getByTestId('alerts-retry-ad_003');
+        fireEvent.keyDown(retryButton, { key: 'Enter' });
+        await waitFor(() => {
+            expect(screen.queryByTestId('alerts-detail-ad_003')).not.toBeInTheDocument();
+        });
     });
 });
 

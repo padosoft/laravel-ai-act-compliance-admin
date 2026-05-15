@@ -102,6 +102,8 @@ export function AlertsScreen() {
                 return;
             }
             if (outcome.kind === 'unauthorized') {
+                setDispatches([]);
+                setSelectedId(null);
                 setFetchState({
                     kind: 'error',
                     message: 'Cannot load alert dispatches — not authorized.',
@@ -110,12 +112,15 @@ export function AlertsScreen() {
             }
             if (outcome.kind === 'server-error') {
                 const suffix = outcome.status ? ` (HTTP ${outcome.status})` : '';
+                setDispatches([]);
+                setSelectedId(null);
                 setFetchState({
                     kind: 'error',
                     message: `Cannot load alert dispatches — server error${suffix}.`,
                 });
                 return;
             }
+            console.warn('[AlertsScreen] /alerts/dispatches unreachable; falling back to bundled fixture.');
             setFetchState({
                 kind: 'error',
                 message: 'Cannot load alert dispatches — network unreachable.',
@@ -238,7 +243,6 @@ export function AlertsScreen() {
                     </select>
                 </div>
             </div>
-
             <div className="card" data-testid="alerts-table">
                 <table className="data-table">
                     <thead>
