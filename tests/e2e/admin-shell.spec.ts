@@ -28,6 +28,7 @@ test.describe('Admin shell + navigation', () => {
             { key: 'risks', screenTestid: 'risks-screen' },
             { key: 'fria', screenTestid: 'fria-screen' },
             { key: 'incidents', screenTestid: 'incidents-screen' },
+            { key: 'human-review', screenTestid: 'human-review-screen' },
             { key: 'bias', screenTestid: 'bias-screen' },
             { key: 'dpo', screenTestid: 'dpo-screen' },
             { key: 'regulatory', screenTestid: 'regulatory-screen' },

@@ -24,6 +24,7 @@ export const ROUTES: RouteEntry[] = [
     { key: 'risks', path: '/risks', label: 'Risk Register', icon: I.ShieldAlert, section: 'Risk Management' },
     { key: 'fria', path: '/fria', label: 'FRIA Assessments', icon: I.FileText, section: 'Risk Management' },
     { key: 'incidents', path: '/incidents', label: 'Incident Manager', icon: I.Flag, section: 'Risk Management' },
+    { key: 'human-review', path: '/human-review', label: 'Human Oversight', icon: I.UserCheck, section: 'Risk Management' },
     { key: 'bias', path: '/bias', label: 'Bias Monitor', icon: I.Scale, section: 'Risk Management' },
     { key: 'dpo', path: '/dpo', label: 'DPO Console', icon: I.Briefcase, section: 'Governance' },
     { key: 'regulatory', path: '/regulatory', label: 'Regulatory Feed', icon: I.FileText, section: 'Governance' },
