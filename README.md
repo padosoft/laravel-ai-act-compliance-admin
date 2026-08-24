@@ -14,14 +14,14 @@
   <a href="#prerequisites"><img src="https://img.shields.io/badge/TypeScript-5-3178c6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript 5"></a>
   <a href="#prerequisites"><img src="https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=flat-square&logo=php&logoColor=white" alt="PHP 8.2+"></a>
   <a href="#prerequisites"><img src="https://img.shields.io/badge/Laravel-11%20%7C%2012%20%7C%2013-FF2D20?style=flat-square&logo=laravel&logoColor=white" alt="Laravel 11/12/13"></a>
-  <a href="#-the-eight-screens"><img src="https://img.shields.io/badge/screens-8-success?style=flat-square" alt="8 screens"></a>
+  <a href="#%EF%B8%8F-the-twelve-screens"><img src="https://img.shields.io/badge/screens-12-success?style=flat-square" alt="12 screens"></a>
   <a href="#-accessibility"><img src="https://img.shields.io/badge/WCAG-2.1%20AA-success?style=flat-square" alt="WCAG 2.1 AA"></a>
   <a href="#-ai-vibe-coding-pack-included"><img src="https://img.shields.io/badge/🚀-AI%20vibe--coding%20pack-yellow?style=flat-square" alt="AI vibe-coding pack"></a>
 </p>
 
 <p align="center">
   <a href="#-why-this-exists">Why</a> ·
-  <a href="#-the-eight-screens">Screens</a> ·
+  <a href="#%EF%B8%8F-the-twelve-screens">Screens</a> ·
   <a href="#-killer-features">Killer features</a> ·
   <a href="#-quick-start-jr-proof-5-minutes">Quick start</a> ·
   <a href="#-cross-mount">Cross-mount</a> ·
@@ -49,7 +49,7 @@ Every `padosoft/*` package ships with a `.claude/` directory containing:
 ## 📖 Table of contents
 
 - [Why this exists](#-why-this-exists)
-- [The eight screens](#-the-eight-screens)
+- [The twelve screens](#%EF%B8%8F-the-twelve-screens)
 - [Killer features](#-killer-features)
 - [Prerequisites](#prerequisites)
 - [Quick start (jr-proof, 5 minutes)](#-quick-start-jr-proof-5-minutes)
@@ -86,7 +86,7 @@ This package gives you the **8 production-grade screens** out of the box. Pixel-
 
 ---
 
-## 🖥️ The eleven screens
+## 🖥️ The twelve screens
 
 Every screen is a real React 19 component (not a scaffold). Each has loading / ready / error / empty `data-state` props for deterministic E2E testing, a11y landmarks, and keyboard navigation.
 
@@ -95,7 +95,7 @@ Every screen is a real React 19 component (not a scaffold). Each has loading / r
 | 1 | **Compliance Overview** | Single-pane KPI dashboard + activity feed + Article 30 attestation card | 4 clickable KPI tiles (DSAR / Incidents / Consent / Bias) + alert banner + recharts-style DSAR depth SVG chart + chronological activity feed |
 | 2 | **DSAR Queue** | GDPR Art. 15 / 16 / 17 request queue | Filterable table + bulk actions + status pills + SLA breach badges + drawer with subject / scope / timeline |
 | 3 | **Consent Overview** | Per-feature + per-user consent matrix | Tabs (Per feature / Per user) + feature cards with consent bar (granted / revoked / never) + sparkline + user matrix table |
-| 4 | **Risk Register** | AI Act Annex III risk catalogue | Category summary tiles (unacceptable / high / limited / low) + filter sidebar + card grid + drawer with article references |
+| 4 | **Risk Register** *(v1.7 live)* | AI Act Annex III risk catalogue — live `GET /risks` with fixture fallback, so entries fed by the core's IamDelegation bridge (`AI agent: NAME [agt_…]`) appear for real | Category summary tiles (unacceptable / high / limited / low) + status pills incl. **mitigating** (colour-coded, humanized fallback for unknown statuses) + filter sidebar + card grid + drawer with article references + id-searchable (paste an `agt_…`) |
 | 5 | **Incident Manager** | AI Act Art. 73 ticket lifecycle | 4-lane kanban (open / triage / mitigating / closed) + severity-coloured cards + drawer with timeline + mitigations + escalation tree |
 | 6 | **Bias Monitor** *(v1.2 enhanced)* | AI Act Art. 10 cohort parity + drift | Pluggable parity-metric dropdown (DemographicParity / EqualizedOdds / Calibration) with per-metric article evidence + 13-week drift multi-line chart + flagged samples table + per-metric CI bands |
 | 7 | **DPO Console** | Retention + deletion + attestation | Data flow diagram (sankey-style SVG) + retention table + deletion log + Article 30 attestation modal with PDF generator |
@@ -103,6 +103,7 @@ Every screen is a real React 19 component (not a scaffold). Each has loading / r
 | 9 | **Alerts** *(v1.3)* | Cohort-drift dispatch audit trail | Live-pill + channel / severity / status filter bar + dispatch table with permanent / transient pill + retry button on transient-failure rows + inline detail drawer with payload + decrypted endpoint + error message |
 | 10 | **Regulatory Feed** *(v1.4)* | EU AI Act amendment dashboard | Severity + status filter bar + amendment table with impacted clauses chip strip + Poll-now button + inline detail drawer with Mark triaged / Mark resolved / Ignore actions |
 | 11 | **Tenants** *(v1.5)* | DPO multi-org console | Platform KPI grid (total / active / suspended / alerts / amendments / FRIA / incidents) + tier + status filter bar + tenants table + inline detail drawer with Suspend / Activate / Archive actions |
+| 12 | **Human Oversight** *(v1.7)* | AI Act Art. 14 review trail — live `GET /human-reviews` with fixture fallback; records fed automatically by the core's IamDelegation bridge (≥ 1.8): delegation grants land as `approved` reviews with the consent evidence, revocations flip them to `rejected` | Subject-type labels with humanize fallback (**Delegation grant** first-class) + state pills (pending / approved / rejected / escalated) + state & subject filters + drawer with the full review notes (scopes, budget, step-up confirmation id + AAL) |
 
 ### Cross-cutting UX
 
