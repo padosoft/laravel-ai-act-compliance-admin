@@ -1112,6 +1112,28 @@ export interface HumanReviewRow {
 
 export const HUMAN_REVIEWS: HumanReviewRow[] = [
     {
+        id: 5,
+        subject_type: 'ai_tool_approval',
+        subject_id: 'call_01J9TOOL0001',
+        state: 'rejected',
+        reviewer_id: 'user:42',
+        review_notes:
+            'Agent "App\\Agents\\SupportCopilot" asked to run tool "issue_refund".\nRun: inv_01J9RUN0001.\nConversation: conv_01J9CNV0001.\nReason given: The customer reports the order never arrived.\nArguments: {"order":"ORD-8841","amount":129.9,"currency":"EUR"}\nDenied by the user; the tool did not run. Resolved on run inv_01J9RUN0001.',
+        created_at: new Date(hrAgo(3)).toISOString(),
+        updated_at: new Date(hrAgo(3)).toISOString(),
+    },
+    {
+        id: 4,
+        subject_type: 'ai_tool_approval',
+        subject_id: 'call_01J9TOOL0002',
+        state: 'pending',
+        reviewer_id: 'user:87',
+        review_notes:
+            'Agent "App\\Agents\\SupportCopilot" asked to run tool "send_customer_email".\nRun: inv_01J9RUN0002.\nConversation: conv_01J9CNV0002.\nReason given: Confirm the replacement shipment to the customer.\nArguments: {"to":"[redacted]","template":"replacement_shipped"}',
+        created_at: new Date(hrAgo(1)).toISOString(),
+        updated_at: new Date(hrAgo(1)).toISOString(),
+    },
+    {
         id: 3,
         subject_type: 'iam_delegation_grant',
         subject_id: 'dgr_01J9DEMO0001',

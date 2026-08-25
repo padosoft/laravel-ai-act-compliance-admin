@@ -103,7 +103,7 @@ Every screen is a real React 19 component (not a scaffold). Each has loading / r
 | 9 | **Alerts** *(v1.3)* | Cohort-drift dispatch audit trail | Live-pill + channel / severity / status filter bar + dispatch table with permanent / transient pill + retry button on transient-failure rows + inline detail drawer with payload + decrypted endpoint + error message |
 | 10 | **Regulatory Feed** *(v1.4)* | EU AI Act amendment dashboard | Severity + status filter bar + amendment table with impacted clauses chip strip + Poll-now button + inline detail drawer with Mark triaged / Mark resolved / Ignore actions |
 | 11 | **Tenants** *(v1.5)* | DPO multi-org console | Platform KPI grid (total / active / suspended / alerts / amendments / FRIA / incidents) + tier + status filter bar + tenants table + inline detail drawer with Suspend / Activate / Archive actions |
-| 12 | **Human Oversight** *(v1.7)* | AI Act Art. 14 review trail — live `GET /human-reviews` with fixture fallback; records fed automatically by the core's IamDelegation bridge (≥ 1.8): delegation grants land as `approved` reviews with the consent evidence, revocations flip them to `rejected` | Subject-type labels with humanize fallback (**Delegation grant** first-class) + state pills (pending / approved / rejected / escalated) + state & subject filters + drawer with the full review notes (scopes, budget, step-up confirmation id + AAL) |
+| 12 | **Human Oversight** *(v1.7, extended v1.2)* | AI Act Art. 14 review trail — live `GET /human-reviews` with fixture fallback. Two feeds now land here: the IamDelegation bridge (core ≥ 1.8) writes **delegation grants** — what an agent *may* do — and the AI-runtime bridge (core ≥ 1.9, `laravel/ai` ^0.11) writes **per-action tool approvals** — what an agent was *about to* do, which is the evidence an auditor asks for once the action had an effect | Subject-type labels with humanize fallback (**Delegation grant** and **Tool approval** first-class) + state pills + **Outcome** column that says which of the two happened — *denied, the tool did not run* vs *approved, the tool ran* — instead of leaving `rejected` to mean either + **Run** column: one click pivots the whole trail to a single invocation + drawer with the call behind the decision (agent · tool · tool-call id · run · conversation), the model's stated reason marked as a claim, and the full review notes |
 
 ### Cross-cutting UX
 
@@ -152,6 +152,17 @@ The package mounts as a real React app at `/admin/ai-act-compliance` — same br
 ### 5. TypeScript everywhere
 
 Every screen, every helper, every chart component is `.tsx` / `.ts`. Strict mode on. The published shape of the host's HTTP API is fully typed in `src/api/`.
+
+### 6. Art. 14 at the level of a single action — not just a policy
+
+A delegation grant proves a human approved what an agent **may** do. That is a good answer to a policy question and a poor answer to the one an auditor actually asks: *who approved **this** refund?*
+
+With `laravel/ai` ^0.11 the core writes a review for every tool the agent asked to run — and the panel reads the chain back out of it:
+
+- **The Outcome column tells refusal from failure.** `rejected` alone is ambiguous: a human said no, or the record went stale, or the tool blew up. The column reads the resolver's own sentence and says *denied — tool did not run* or *approved — tool ran*, falling back to the state only when no sentence was written.
+- **The Run column pivots the whole trail to one invocation.** Click it and the table narrows to every decision that run produced; click the chip to come back. The filter clears itself if a later fetch drops the run, so it can never strand you on an empty table.
+- **The drawer names the call behind the decision** — agent, tool, tool-call id, run, conversation — parsed out of the audit prose, with the raw notes still underneath. The run id is the same `invocation_id` the [FinOps panel](https://github.com/padosoft/laravel-ai-finops-admin) keys its Agent Runs page on: paste it there for the steps, tools and spend of that same run.
+- **The model's stated reason is labelled a claim.** It is text an untrusted component wrote about its own request. Rendering it beside human evidence without saying so is how a reviewer ends up quoting the model back to an auditor.
 
 ---
 
