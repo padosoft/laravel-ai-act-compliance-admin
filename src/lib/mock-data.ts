@@ -170,7 +170,7 @@ export const INCIDENT_DETAIL: Record<string, IncidentDetail> = {
 };
 
 export type RiskCategory = 'unacceptable' | 'high' | 'limited' | 'low';
-export type RiskStatus = 'open' | 'in_progress' | 'closed';
+export type RiskStatus = 'open' | 'in_progress' | 'mitigating' | 'closed';
 
 export interface Risk {
     id: string;
@@ -1090,3 +1090,79 @@ export const TENANT_PLATFORM_TOTALS: TenantPlatformTotals = {
     fria_assessments_total: 9,
     incidents_total: 14,
 };
+
+// ── Human oversight (Art. 14) ────────────────────────────────────────────────
+// Backend shape: laravel-ai-act-compliance `human_reviews` rows. The
+// iam_delegation_grant rows are fed automatically by the IamDelegation bridge
+// (>= 1.8): a delegation grant is a documented human-oversight decision.
+
+export type HumanReviewState = 'pending' | 'approved' | 'rejected' | 'escalated';
+
+export interface HumanReviewRow {
+    id: number;
+    subject_type: string | null;
+    subject_id: string | null;
+    state: HumanReviewState | string;
+    reviewer_id: string | null;
+    review_notes: string | null;
+    tenant_id?: string | null;
+    created_at?: string | null;
+    updated_at?: string | null;
+}
+
+export const HUMAN_REVIEWS: HumanReviewRow[] = [
+    {
+        id: 5,
+        subject_type: 'ai_tool_approval',
+        subject_id: 'call_01J9TOOL0001',
+        state: 'rejected',
+        reviewer_id: 'user:42',
+        review_notes:
+            'Agent "App\\Agents\\SupportCopilot" asked to run tool "issue_refund".\nRun: inv_01J9RUN0001.\nConversation: conv_01J9CNV0001.\nReason given: The customer reports the order never arrived.\nArguments: {"order":"ORD-8841","amount":129.9,"currency":"EUR"}\nDenied by the user; the tool did not run. Resolved on run inv_01J9RUN0001.',
+        created_at: new Date(hrAgo(3)).toISOString(),
+        updated_at: new Date(hrAgo(3)).toISOString(),
+    },
+    {
+        id: 4,
+        subject_type: 'ai_tool_approval',
+        subject_id: 'call_01J9TOOL0002',
+        state: 'pending',
+        reviewer_id: 'user:87',
+        review_notes:
+            'Agent "App\\Agents\\SupportCopilot" asked to run tool "send_customer_email".\nRun: inv_01J9RUN0002.\nConversation: conv_01J9CNV0002.\nReason given: Confirm the replacement shipment to the customer.\nArguments: {"to":"[redacted]","template":"replacement_shipped"}',
+        created_at: new Date(hrAgo(1)).toISOString(),
+        updated_at: new Date(hrAgo(1)).toISOString(),
+    },
+    {
+        id: 3,
+        subject_type: 'iam_delegation_grant',
+        subject_id: 'dgr_01J9DEMO0001',
+        state: 'approved',
+        reviewer_id: 'user:42',
+        review_notes:
+            'Delegated access granted to AI agent "Support Copilot" (agt_01J8DEMO).\nScopes: orders:read, orders:write.\nPurpose: Order assistance.\nExpires: 2026-09-01T00:00:00+00:00.\nBudget: {"amount":25,"calls":100,"currency":"EUR"}.\nConsent evidence: confirmation stepup_9f1c2 (AAL aal2).',
+        created_at: new Date(hrAgo(6)).toISOString(),
+        updated_at: new Date(hrAgo(6)).toISOString(),
+    },
+    {
+        id: 2,
+        subject_type: 'iam_delegation_grant',
+        subject_id: 'dgr_01J9DEMO0002',
+        state: 'rejected',
+        reviewer_id: 'user:87',
+        review_notes:
+            'Delegated access to AI agent "Pricing Bot" (agt_01J8PRC).\nDelegation revoked by user:87 at 2026-08-23T18:41:00+00:00.',
+        created_at: new Date(hrAgo(30)).toISOString(),
+        updated_at: new Date(hrAgo(18)).toISOString(),
+    },
+    {
+        id: 1,
+        subject_type: 'model_output',
+        subject_id: 'inference_88412',
+        state: 'pending',
+        reviewer_id: null,
+        review_notes: 'High-impact recommendation flagged by the bias monitor — awaiting reviewer.',
+        created_at: new Date(hrAgo(2)).toISOString(),
+        updated_at: new Date(hrAgo(2)).toISOString(),
+    },
+];

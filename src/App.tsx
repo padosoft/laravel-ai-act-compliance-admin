@@ -8,6 +8,7 @@ import { ConsentScreen } from './features/consent/ConsentScreen';
 import { RisksScreen } from './features/risks/RisksScreen';
 import { FriaScreen } from './features/fria/FriaScreen';
 import { IncidentsScreen } from './features/incidents/IncidentsScreen';
+import { HumanReviewScreen } from './features/human-review/HumanReviewScreen';
 import { BiasScreen } from './features/bias/BiasScreen';
 import { DpoScreen } from './features/dpo/DpoScreen';
 import { RegulatoryScreen } from './features/regulatory/RegulatoryScreen';
@@ -38,6 +39,7 @@ export function App() {
                     <Route path="risks" element={<RisksScreen />} />
                     <Route path="fria" element={<FriaScreen />} />
                     <Route path="incidents" element={<IncidentsScreen />} />
+                    <Route path="human-review" element={<HumanReviewScreen />} />
                     <Route path="bias" element={<BiasScreen />} />
                     <Route path="dpo" element={<DpoScreen />} />
                     <Route path="regulatory" element={<RegulatoryScreen />} />
