@@ -14,14 +14,14 @@
   <a href="#prerequisites"><img src="https://img.shields.io/badge/TypeScript-5-3178c6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript 5"></a>
   <a href="#prerequisites"><img src="https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=flat-square&logo=php&logoColor=white" alt="PHP 8.2+"></a>
   <a href="#prerequisites"><img src="https://img.shields.io/badge/Laravel-11%20%7C%2012%20%7C%2013-FF2D20?style=flat-square&logo=laravel&logoColor=white" alt="Laravel 11/12/13"></a>
-  <a href="#-the-eight-screens"><img src="https://img.shields.io/badge/screens-8-success?style=flat-square" alt="8 screens"></a>
+  <a href="#%EF%B8%8F-the-twelve-screens"><img src="https://img.shields.io/badge/screens-12-success?style=flat-square" alt="12 screens"></a>
   <a href="#-accessibility"><img src="https://img.shields.io/badge/WCAG-2.1%20AA-success?style=flat-square" alt="WCAG 2.1 AA"></a>
   <a href="#-ai-vibe-coding-pack-included"><img src="https://img.shields.io/badge/🚀-AI%20vibe--coding%20pack-yellow?style=flat-square" alt="AI vibe-coding pack"></a>
 </p>
 
 <p align="center">
   <a href="#-why-this-exists">Why</a> ·
-  <a href="#-the-eight-screens">Screens</a> ·
+  <a href="#%EF%B8%8F-the-twelve-screens">Screens</a> ·
   <a href="#-killer-features">Killer features</a> ·
   <a href="#-quick-start-jr-proof-5-minutes">Quick start</a> ·
   <a href="#-cross-mount">Cross-mount</a> ·
@@ -49,7 +49,7 @@ Every `padosoft/*` package ships with a `.claude/` directory containing:
 ## 📖 Table of contents
 
 - [Why this exists](#-why-this-exists)
-- [The eight screens](#-the-eight-screens)
+- [The twelve screens](#%EF%B8%8F-the-twelve-screens)
 - [Killer features](#-killer-features)
 - [Prerequisites](#prerequisites)
 - [Quick start (jr-proof, 5 minutes)](#-quick-start-jr-proof-5-minutes)
@@ -86,7 +86,7 @@ This package gives you the **8 production-grade screens** out of the box. Pixel-
 
 ---
 
-## 🖥️ The eleven screens
+## 🖥️ The twelve screens
 
 Every screen is a real React 19 component (not a scaffold). Each has loading / ready / error / empty `data-state` props for deterministic E2E testing, a11y landmarks, and keyboard navigation.
 
@@ -95,7 +95,7 @@ Every screen is a real React 19 component (not a scaffold). Each has loading / r
 | 1 | **Compliance Overview** | Single-pane KPI dashboard + activity feed + Article 30 attestation card | 4 clickable KPI tiles (DSAR / Incidents / Consent / Bias) + alert banner + recharts-style DSAR depth SVG chart + chronological activity feed |
 | 2 | **DSAR Queue** | GDPR Art. 15 / 16 / 17 request queue | Filterable table + bulk actions + status pills + SLA breach badges + drawer with subject / scope / timeline |
 | 3 | **Consent Overview** | Per-feature + per-user consent matrix | Tabs (Per feature / Per user) + feature cards with consent bar (granted / revoked / never) + sparkline + user matrix table |
-| 4 | **Risk Register** | AI Act Annex III risk catalogue | Category summary tiles (unacceptable / high / limited / low) + filter sidebar + card grid + drawer with article references |
+| 4 | **Risk Register** *(v1.7 live)* | AI Act Annex III risk catalogue — live `GET /risks` with fixture fallback, so entries fed by the core's IamDelegation bridge (`AI agent: NAME [agt_…]`) appear for real | Category summary tiles (unacceptable / high / limited / low) + status pills incl. **mitigating** (colour-coded, humanized fallback for unknown statuses) + filter sidebar + card grid + drawer with article references + id-searchable (paste an `agt_…`) |
 | 5 | **Incident Manager** | AI Act Art. 73 ticket lifecycle | 4-lane kanban (open / triage / mitigating / closed) + severity-coloured cards + drawer with timeline + mitigations + escalation tree |
 | 6 | **Bias Monitor** *(v1.2 enhanced)* | AI Act Art. 10 cohort parity + drift | Pluggable parity-metric dropdown (DemographicParity / EqualizedOdds / Calibration) with per-metric article evidence + 13-week drift multi-line chart + flagged samples table + per-metric CI bands |
 | 7 | **DPO Console** | Retention + deletion + attestation | Data flow diagram (sankey-style SVG) + retention table + deletion log + Article 30 attestation modal with PDF generator |
@@ -103,6 +103,7 @@ Every screen is a real React 19 component (not a scaffold). Each has loading / r
 | 9 | **Alerts** *(v1.3)* | Cohort-drift dispatch audit trail | Live-pill + channel / severity / status filter bar + dispatch table with permanent / transient pill + retry button on transient-failure rows + inline detail drawer with payload + decrypted endpoint + error message |
 | 10 | **Regulatory Feed** *(v1.4)* | EU AI Act amendment dashboard | Severity + status filter bar + amendment table with impacted clauses chip strip + Poll-now button + inline detail drawer with Mark triaged / Mark resolved / Ignore actions |
 | 11 | **Tenants** *(v1.5)* | DPO multi-org console | Platform KPI grid (total / active / suspended / alerts / amendments / FRIA / incidents) + tier + status filter bar + tenants table + inline detail drawer with Suspend / Activate / Archive actions |
+| 12 | **Human Oversight** *(v1.7, extended v1.2)* | AI Act Art. 14 review trail — live `GET /human-reviews` with fixture fallback. Two feeds now land here: the IamDelegation bridge (core ≥ 1.8) writes **delegation grants** — what an agent *may* do — and the AI-runtime bridge (core ≥ 1.9, `laravel/ai` ^0.11) writes **per-action tool approvals** — what an agent was *about to* do, which is the evidence an auditor asks for once the action had an effect | Subject-type labels with humanize fallback (**Delegation grant** and **Tool approval** first-class) + state pills + **Outcome** column that says which of the two happened — *denied, the tool did not run* vs *approved, the tool ran* — instead of leaving `rejected` to mean either + **Run** column: one click pivots the whole trail to a single invocation + drawer with the call behind the decision (agent · tool · tool-call id · run · conversation), the model's stated reason marked as a claim, and the full review notes |
 
 ### Cross-cutting UX
 
@@ -151,6 +152,17 @@ The package mounts as a real React app at `/admin/ai-act-compliance` — same br
 ### 5. TypeScript everywhere
 
 Every screen, every helper, every chart component is `.tsx` / `.ts`. Strict mode on. The published shape of the host's HTTP API is fully typed in `src/api/`.
+
+### 6. Art. 14 at the level of a single action — not just a policy
+
+A delegation grant proves a human approved what an agent **may** do. That is a good answer to a policy question and a poor answer to the one an auditor actually asks: *who approved **this** refund?*
+
+With `laravel/ai` ^0.11 the core writes a review for every tool the agent asked to run — and the panel reads the chain back out of it:
+
+- **The Outcome column tells refusal from failure.** `rejected` alone is ambiguous: a human said no, or the record went stale, or the tool blew up. The column reads the resolver's own sentence and says *denied — tool did not run* or *approved — tool ran*, falling back to the state only when no sentence was written.
+- **The Run column pivots the whole trail to one invocation.** Click it and the table narrows to every decision that run produced; click the chip to come back. The filter clears itself if a later fetch drops the run, so it can never strand you on an empty table.
+- **The drawer names the call behind the decision** — agent, tool, tool-call id, run, conversation — parsed out of the audit prose, with the raw notes still underneath. The run id is the same `invocation_id` the [FinOps panel](https://github.com/padosoft/laravel-ai-finops-admin) keys its Agent Runs page on: paste it there for the steps, tools and spend of that same run.
+- **The model's stated reason is labelled a claim.** It is text an untrusted component wrote about its own request. Rendering it beside human evidence without saying so is how a reviewer ends up quoting the model back to an auditor.
 
 ---
 
