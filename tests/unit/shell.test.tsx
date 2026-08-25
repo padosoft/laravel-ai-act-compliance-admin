@@ -22,11 +22,11 @@ function renderShell(initialRoute = '/') {
 }
 
 describe('Shell — sidebar + topbar', () => {
-    it('renders the brand mark, all 8 navigation entries, and the user chip', () => {
+    it('renders the brand mark, the navigation entries, and the user chip', () => {
         renderShell();
         expect(screen.getByText('AI Act Compliance')).toBeInTheDocument();
         // Two grouped sections of nav items + 1 user chip name
-        for (const key of ['overview', 'dsar', 'consent', 'risks', 'incidents', 'bias', 'dpo', 'settings']) {
+        for (const key of ['overview', 'dsar', 'consent', 'risks', 'incidents', 'human-review', 'bias', 'dpo', 'settings']) {
             expect(screen.getByTestId(`ai-act-nav-${key}`)).toBeInTheDocument();
         }
         expect(screen.getByText('Giulia Amalfi')).toBeInTheDocument();

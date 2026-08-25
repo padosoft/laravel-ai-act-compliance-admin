@@ -19,6 +19,7 @@ import { AlertsScreen } from '../../src/features/alerts/AlertsScreen';
 import { DsarScreen } from '../../src/features/dsar/DsarScreen';
 import { ConsentScreen } from '../../src/features/consent/ConsentScreen';
 import { RisksScreen } from '../../src/features/risks/RisksScreen';
+import { HumanReviewScreen } from '../../src/features/human-review/HumanReviewScreen';
 import { FriaScreen } from '../../src/features/fria/FriaScreen';
 import { IncidentsScreen } from '../../src/features/incidents/IncidentsScreen';
 import { BiasScreen } from '../../src/features/bias/BiasScreen';
@@ -68,6 +69,17 @@ describe('Compliance admin screens render', () => {
         expect(getByTestId('risks-screen')).toBeTruthy();
         expect(getByTestId('risk-summary')).toBeTruthy();
         expect(getByTestId('risk-grid')).toBeTruthy();
+    });
+
+    it('HumanReviewScreen renders the oversight table with delegation-grant rows', () => {
+        const { getByTestId, getAllByText, getByText } = render(
+            <MemoryRouter><HumanReviewScreen /></MemoryRouter>,
+        );
+        expect(getByTestId('human-review-screen')).toBeInTheDocument();
+        expect(getByTestId('human-review-filter-bar')).toBeInTheDocument();
+        // Fixture rows: the IAM bridge subject type gets a first-class label.
+        expect(getAllByText('Delegation grant').length).toBeGreaterThan(0);
+        expect(getByText('dgr_01J9DEMO0001')).toBeInTheDocument();
     });
 
     it('FriaScreen renders filter bar and assessment table', () => {
