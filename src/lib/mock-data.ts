@@ -1112,6 +1112,30 @@ export interface HumanReviewRow {
 
 export const HUMAN_REVIEWS: HumanReviewRow[] = [
     {
+        // The oversight item that rots: paused three days ago, still unanswered. The routine is
+        // behaving correctly — it does not act without permission — so nothing else reports it.
+        id: 7,
+        subject_type: 'routine_run',
+        subject_id: 'run_01J9RTN0007',
+        state: 'pending',
+        reviewer_id: 'user:42',
+        review_notes:
+            'Routine "Overdue invoice reminders" (rt_01J9RTN0001) paused, awaiting a human.\nAction class outside the mandate: invoice.write_off.\nQuestion: Write off INV-003, 400 days overdue?',
+        created_at: new Date(hrAgo(74)).toISOString(),
+        updated_at: new Date(hrAgo(74)).toISOString(),
+    },
+    {
+        id: 6,
+        subject_type: 'routine_mandate',
+        subject_id: 'rt_01J9RTN0001',
+        state: 'approved',
+        reviewer_id: 'user:42',
+        review_notes:
+            'Standing mandate granted to routine "Overdue invoice reminders" (rt_01J9RTN0001).\nAction classes: invoice.remind.\nTarget: invoice.reminder, payload digest sha256:9f2c…a41b.\nBudget ceiling: 50 EUR.\nConsent evidence: confirmation stepup_01J9CNF0004 (AAL aal2).',
+        created_at: new Date(hrAgo(120)).toISOString(),
+        updated_at: new Date(hrAgo(120)).toISOString(),
+    },
+    {
         id: 5,
         subject_type: 'ai_tool_approval',
         subject_id: 'call_01J9TOOL0001',

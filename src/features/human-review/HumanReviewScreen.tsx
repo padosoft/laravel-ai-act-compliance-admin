@@ -35,6 +35,10 @@ const STATE_COLOR: Record<string, string> = {
 const SUBJECT_TYPE_LABEL: Record<string, string> = {
     ai_tool_approval: 'Tool approval',
     iam_delegation_grant: 'Delegation grant',
+    // Only `routine_run` is mapped: humanize() already turns `routine_mandate` into
+    // "Routine mandate", and a map entry that reproduces the fallback is dead configuration.
+    // This one earns its place — the record is about the PAUSE, not about the run.
+    routine_run: 'Routine pause',
     model_output: 'Model output',
 };
 
@@ -207,6 +211,12 @@ export function HumanReviewScreen() {
     const pendingCount = reviews.filter((r) => r.state === 'pending').length;
     const delegationCount = reviews.filter((r) => r.subject_type === 'iam_delegation_grant').length;
     const approvalCount = reviews.filter((r) => r.subject_type === 'ai_tool_approval').length;
+    // A routine pause left pending is the one oversight item that rots invisibly: the routine is
+    // behaving as designed (it does not act without permission), so nothing else anywhere reports
+    // it. Counting it separately is what makes the silence visible.
+    const stalledRoutineCount = reviews.filter(
+        (r) => r.subject_type === 'routine_run' && r.state === 'pending',
+    ).length;
 
     return (
         <div className="page" data-testid="human-review-screen" data-state="ready">
@@ -216,6 +226,15 @@ export function HumanReviewScreen() {
                     <p className="page-sub">
                         AI Act Art. 14 review trail · {reviews.length} records · {pendingCount} pending ·{' '}
                         {delegationCount} from delegated AI agents · {approvalCount} per-action tool approvals
+                        {stalledRoutineCount > 0 && (
+                            <>
+                                {' · '}
+                                <strong style={{ color: 'var(--sev-high)' }}>
+                                    {stalledRoutineCount} routine{stalledRoutineCount === 1 ? '' : 's'} waiting for an
+                                    answer
+                                </strong>
+                            </>
+                        )}
                     </p>
                 </div>
             </div>
