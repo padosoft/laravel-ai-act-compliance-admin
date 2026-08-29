@@ -130,3 +130,37 @@ describe('Human Oversight — tool approvals', () => {
         expect(screen.getByText(/read it as a claim, not as evidence/i)).toBeTruthy();
     });
 });
+
+describe('Human Oversight — scheduled routines', () => {
+    function renderScreen() {
+        return render(
+            <MemoryRouter>
+                <HumanReviewScreen />
+            </MemoryRouter>,
+        );
+    }
+
+    it('calls a paused run a pause, which the slug fallback would not', () => {
+        // `humanize()` would render "Routine run" — technically derived from the column, and
+        // wrong about what the record is: a question waiting for an answer. Only assertions the
+        // fallback cannot satisfy on its own belong here.
+        renderScreen();
+        expect(screen.getByTestId('human-review-row-7').textContent).toContain('Routine pause');
+        expect(screen.getByTestId('human-review-row-7').textContent).not.toContain('Routine run');
+    });
+
+    it('counts the pauses nobody answered in the header', () => {
+        // The one oversight item that rots invisibly: the routine is behaving as designed — it
+        // does not act without permission — so nothing else anywhere reports it. This counter is
+        // what makes the silence visible.
+        renderScreen();
+        expect(screen.getByTestId('human-review-screen').textContent).toContain(
+            '1 routine waiting for an answer',
+        );
+    });
+
+    it('shows no per-action outcome for a mandate: it records what MAY happen, not what did', () => {
+        renderScreen();
+        expect(screen.getByTestId('human-review-outcome-6').textContent).toBe('—');
+    });
+});
